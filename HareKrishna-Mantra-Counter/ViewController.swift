@@ -10,8 +10,11 @@ import Speech
 
 public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     // MARK: Properties
+    private var count = 0
     
-    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))!
+    private var previousText = ""
+    
+    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "hi-IN"))!
     
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     
@@ -22,6 +25,8 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     @IBOutlet var textView: UITextView!
     
     @IBOutlet var recordButton: UIButton!
+    
+    @IBOutlet weak var countLabel: UILabel!
     
     // MARK: View Controller Lifecycle
     
@@ -88,19 +93,26 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         if #available(iOS 13, *) {
             recognitionRequest.requiresOnDeviceRecognition = false
         }
+ 
         
         // Create a recognition task for the speech recognition session.
         // Keep a reference to the task so that it can be canceled.
         recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { result, error in
             var isFinal = false
             
-            if let result = result {
-                // Update the text view with the results.
-                self.textView.text = result.bestTranscription.formattedString
+            
+            if let result = result, let transcription: SFTranscription? = result.bestTranscription, let text = transcription?.formattedString {
+                let words = text.components(separatedBy: .whitespacesAndNewlines)
+                if let lastWord = words.last, lastWord.contains("खाद्य") || lastWord.contains("कृष्णा") || lastWord.contains("हद") || lastWord.contains("राम"){
+                        self.count += 1
+                }
+                self.textView.text = "Names: \(self.count) " + "Mantras: \(self.count / 16) " + "Rounds: \(self.count / 1728) "
                 isFinal = result.isFinal
-                print("Text \(result.bestTranscription.formattedString)")
+                print("Text \(text)")
+                
             }
             
+           
             if error != nil || isFinal {
                 // Stop recognizing speech if there is a problem.
                 self.audioEngine.stop()
@@ -145,6 +157,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         if audioEngine.isRunning {
             audioEngine.stop()
             recognitionRequest?.endAudio()
+            self.previousText = ""
             recordButton.isEnabled = false
             recordButton.setTitle("Stopping", for: .disabled)
         } else {
