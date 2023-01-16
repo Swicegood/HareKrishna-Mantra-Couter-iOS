@@ -153,7 +153,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             
             if let result = result, let transcription: SFTranscription? = result.bestTranscription, let text = transcription?.formattedString {
                 let words = text.components(separatedBy: .whitespacesAndNewlines)
-                if let lastWord = words.last, lastWord.contains("खाद्य") || lastWord.contains("कृष्णा") || lastWord.contains("हद") || lastWord.contains("राम"){
+                if let lastWord = words.last, lastWord.contains("खाद्य") || lastWord.contains("कृष्णा") || lastWord.contains("हद") || lastWord.contains("राम") || lastWord.contains("हरे"){
                         self.count += 1
                 }
                 self.textView.text = "Names: \(self.count) " + "Mantras: \(self.count / 16) " + "Rounds: \(self.count / 1728) "
