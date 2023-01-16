@@ -28,13 +28,63 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     
     @IBOutlet weak var countLabel: UILabel!
     
-    // MARK: View Controller Lifecycle
+    //MARK: Animation Vars
     
+    var animationLabels:[UILabel] = []
+    var text = "Hare Krishna Hare Krishna Krishna Krishna Hare Hare Hare Rama Hare Rama Rama Rama Hare Hare"
+    var words = ["Hare", "Krishna", "Hare", "Krishna", "Krishna", "Krishna", "Hare", "Hare", "Hare", "Rama", "Hare", "Rama", "Rama", "Rama", "Hare", "Hare"]
+    var currentIndex = 0
+    var isAnimating = false
+    
+    // MARK: View Controller Lifecycle
+        
     public override func viewDidLoad() {
         super.viewDidLoad()
         
         // Disable the record buttons until authorization has been granted.
         recordButton.isEnabled = false
+        
+        // Create a label for each word
+                for word in words {
+                    let label = UILabel()
+                    label.text = word
+                    label.textAlignment = .center
+                    label.textColor = .white
+                    label.font = UIFont.systemFont(ofSize: 50)
+                    label.frame = CGRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height * 10)
+                    animationLabels.append(label)
+                    view.addSubview(label)
+                }
+        // Position the labels in a grid on the screen
+        let rows = 8
+        let columns = 2
+        let gridWidth = view.frame.width / CGFloat(columns)
+        let gridHeight = view.frame.height / CGFloat(rows) * 0.5
+        for (index, label) in animationLabels.enumerated() {
+            let row = index / columns
+            let column = index % columns
+            label.frame = CGRect(x: CGFloat(column) * gridWidth, y: CGFloat(row) * gridHeight+250, width: gridWidth, height: gridHeight)
+        }
+    }
+    
+    func startAnimation() {
+        DispatchQueue.global().async {
+            while self.isAnimating {
+                DispatchQueue.main.async {
+                    let animation = CABasicAnimation(keyPath: "transform.scale")
+                    animation.duration = 0.5
+                    animation.fromValue = 1.0
+                    animation.toValue = 1.5
+                    animation.autoreverses = true
+                    self.animationLabels[self.currentIndex].layer.add(animation, forKey: "scale")
+                }
+                self.currentIndex += 1
+                if self.currentIndex == self.animationLabels.count {
+                    self.currentIndex = 0
+                }
+                sleep(1)
+            }
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -151,6 +201,11 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         }
     }
     
+    func stopAnimation() {
+        for label in animationLabels {
+            label.layer.removeAllAnimations()
+        }
+    }
     // MARK: Interface Builder actions
     
     @IBAction func recordButtonTapped() {
@@ -159,9 +214,15 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             recognitionRequest?.endAudio()
             self.previousText = ""
             recordButton.isEnabled = false
+            stopAnimation()
+            isAnimating = false
             recordButton.setTitle("Stopping", for: .disabled)
         } else {
             do {
+                if !isAnimating {
+                    startAnimation()
+                    isAnimating = true
+                }
                 try startRecording()
                 recordButton.setTitle("Stop Recording", for: [])
             } catch {
