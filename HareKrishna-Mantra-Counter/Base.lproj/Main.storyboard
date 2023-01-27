@@ -18,7 +18,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="4aq-UO-WOf">
-                                <rect key="frame" x="16" y="620" width="343" height="27"/>
+                                <rect key="frame" x="16" y="612" width="343" height="35"/>
                                 <state key="normal" title=" Start Recording!">
                                     <color key="titleColor" red="0.55670103092783507" green="0.32578154707195861" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     <imageReference key="image" image="mic.fill.badge.plus" catalog="system" symbolScale="large"/>
@@ -34,16 +34,31 @@
                                 <fontDescription key="fontDescription" type="system" pointSize="40"/>
                                 <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
                             </textView>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1v6-RF-twk">
+                                <rect key="frame" x="319" y="616" width="26" height="27"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="27" id="Xzd-ic-Gd6"/>
+                                </constraints>
+                                <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
+                                <state key="normal" image="clear.fill" catalog="system"/>
+                                <connections>
+                                    <action selector="resetdButtonTapped" destination="BYZ-38-t0r" eventType="touchUpInside" id="Bli-8z-HNG"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" red="0.92941176470588238" green="0.78823529411764703" blue="0.5725490196078431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
+                            <constraint firstItem="1v6-RF-twk" firstAttribute="centerY" secondItem="4aq-UO-WOf" secondAttribute="centerY" id="0Ql-vf-IEt"/>
+                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="1v6-RF-twk" secondAttribute="trailing" constant="30" id="0eK-t3-lGh"/>
                             <constraint firstItem="n1D-GC-6tq" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" id="1fj-3L-CCc"/>
                             <constraint firstItem="4aq-UO-WOf" firstAttribute="top" secondItem="n1D-GC-6tq" secondAttribute="bottom" constant="8" id="AGK-r6-zJF"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="n1D-GC-6tq" secondAttribute="trailing" constant="16" id="Hkc-Gn-5G8"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="4aq-UO-WOf" secondAttribute="trailing" constant="16" id="MJf-yY-xgD"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="4aq-UO-WOf" secondAttribute="bottom" constant="20" id="OdJ-SA-a7W"/>
                             <constraint firstItem="4aq-UO-WOf" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="16" id="VOv-vY-1tt"/>
+                            <constraint firstItem="1v6-RF-twk" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="319" id="efP-eu-Sas"/>
+                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="1v6-RF-twk" secondAttribute="bottom" constant="24" id="gOC-le-oXP"/>
                             <constraint firstItem="n1D-GC-6tq" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="16" id="yGt-Qf-Dsb"/>
                         </constraints>
                     </view>
@@ -58,6 +73,7 @@
         </scene>
     </scenes>
     <resources>
+        <image name="clear.fill" catalog="system" width="128" height="114"/>
         <image name="mic.fill.badge.plus" catalog="system" width="121" height="128"/>
     </resources>
 </document>

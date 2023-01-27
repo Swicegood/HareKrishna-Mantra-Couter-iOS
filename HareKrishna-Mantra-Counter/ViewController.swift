@@ -28,6 +28,9 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     
     @IBOutlet weak var countLabel: UILabel!
     
+    @IBOutlet var Button: UIButton!
+    
+    
     //MARK: Animation Vars
     
     var animationLabels:[UILabel] = []
@@ -40,7 +43,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         
     public override func viewDidLoad() {
         super.viewDidLoad()
-        
+       
         // Disable the record buttons until authorization has been granted.
         recordButton.isEnabled = false
         
@@ -89,6 +92,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        
         // Configure the SFSpeechRecognizer object already
         // stored in a local member variable.
         speechRecognizer.delegate = self
@@ -153,7 +157,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             
             if let result = result, let transcription: SFTranscription? = result.bestTranscription, let text = transcription?.formattedString {
                 let words = text.components(separatedBy: .whitespacesAndNewlines)
-                if let lastWord = words.last, lastWord.contains("खाद्य") || lastWord.contains("कृष्णा") || lastWord.contains("हद") || lastWord.contains("राम") || lastWord.contains("हरे"){
+                if let lastWord = words.last, lastWord.contains("खाद्य") || lastWord.contains("कृष्णा") || lastWord.contains("हद") || lastWord.contains("राम") || lastWord.contains("हरे") || lastWord.contains("है") || lastWord.contains("फ़ैशन"){
                         self.count += 1
                 }
                 self.textView.text = "Names: \(self.count) " + "Mantras: \(self.count / 16) " + "Rounds: \(self.count / 1728) "
@@ -223,12 +227,27 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                     startAnimation()
                     isAnimating = true
                 }
-                try startRecording()
                 recordButton.setTitle("Stop Recording", for: [])
+                try startRecording()                
             } catch {
                 recordButton.setTitle("Recording Not Available", for: [])
             }
         }
+    }
+    
+    
+    
+    @IBAction func resetdButtonTapped() {
+        let alert = UIAlertController(title: "Are You Sure?", message: "Are you sure you want to reset the count?", preferredStyle: .alert)
+        let yesAction = UIAlertAction(title: "Yes", style: .default) { (action) in
+           // reset the count here
+           self.count = 0
+           self.textView.text = "Names: \(self.count) " + "Mantras: \(self.count / 16) " + "Rounds: \(self.count / 1728) "
+        }
+        let noAction = UIAlertAction(title: "No", style: .cancel, handler: nil)
+        alert.addAction(yesAction)
+        alert.addAction(noAction)
+        present(alert, animated: true, completion: nil)
     }
 }
 
