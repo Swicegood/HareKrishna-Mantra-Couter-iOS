@@ -43,30 +43,32 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         
     public override func viewDidLoad() {
         super.viewDidLoad()
-       
+
         // Disable the record buttons until authorization has been granted.
         recordButton.isEnabled = false
-        
+
         // Create a label for each word
-                for word in words {
-                    let label = UILabel()
-                    label.text = word
-                    label.textAlignment = .center
-                    label.textColor = .white
-                    label.font = UIFont.systemFont(ofSize: 50)
-                    label.frame = CGRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height * 10)
-                    animationLabels.append(label)
-                    view.addSubview(label)
-                }
-        // Position the labels in a grid on the screen
-        let rows = 8
-        let columns = 2
+        for word in words {
+            let label = UILabel()
+            label.text = word
+            label.textAlignment = .center
+            label.textColor = .darkText // Use the custom color
+            label.font = UIFont.systemFont(ofSize: 25) // Adjust font size to fit smaller cells
+            animationLabels.append(label)
+            view.addSubview(label)
+        }
+        
+        // Position the labels in a 4x4 grid on the screen
+        let rows = 4
+        let columns = 4
         let gridWidth = view.frame.width / CGFloat(columns)
-        let gridHeight = view.frame.height / CGFloat(rows) * 0.5
+        let gridHeight = ((view.frame.height * 0.5) / CGFloat(rows)) * 0.5 // Reduce height by 50%
+        let topPadding: CGFloat = 100 // Adjust padding as needed
+        
         for (index, label) in animationLabels.enumerated() {
             let row = index / columns
             let column = index % columns
-            label.frame = CGRect(x: CGFloat(column) * gridWidth, y: CGFloat(row) * gridHeight+250, width: gridWidth, height: gridHeight)
+            label.frame = CGRect(x: CGFloat(column) * gridWidth, y: CGFloat(row) * gridHeight + topPadding, width: gridWidth, height: gridHeight)
         }
     }
     
