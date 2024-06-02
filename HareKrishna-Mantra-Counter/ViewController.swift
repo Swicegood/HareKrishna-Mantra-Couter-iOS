@@ -17,15 +17,15 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
     
-    @IBOutlet var textView: UITextView!
+    @IBOutlet var textView: UITextView! // Outlet for the first UITextView
+    @IBOutlet var resultTextView: UITextView! // Outlet for the second UITextView
     @IBOutlet var recordButton: UIButton!
     @IBOutlet weak var countLabel: UILabel!
     @IBOutlet var Button: UIButton!
     
     // MARK: Animation Vars
     var animationLabels:[UILabel] = []
-    var text = "Hare Krishna Hare Krishna Krishna Krishna Hare Hare Hare Rama Hare Rama Rama Rama Hare Hare"
-    var words = ["Hare", "Krsna", "Hare", "Krsna", "Krsna", "Krsna", "Hare", "Hare", "Hare", "Rama", "Hare", "Rama", "Rama", "Rama", "Hare", "Hare"]
+    var words = ["Hare", "Krishna", "Hare", "Krishna", "Krishna", "Krishna", "Hare", "Hare", "Hare", "Rama", "Hare", "Rama", "Rama", "Rama", "Hare", "Hare"]
     var isAnimating = false
     
     // MARK: View Controller Lifecycle
@@ -51,7 +51,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         let rows = 4
         let columns = 4
         let gridWidth = view.frame.width / CGFloat(columns)
-        let gridHeight = (view.frame.height * 0.5) / CGFloat(rows)
+        let gridHeight = (view.frame.height * 0.3) / CGFloat(rows)
         let topPadding: CGFloat = 100 // Adjust padding as needed
 
         for (index, label) in animationLabels.enumerated() {
@@ -68,16 +68,33 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         // Calculate the total height of the grid
         let totalGridHeight = CGFloat(rows) * gridHeight + topPadding
         
+        // Set text size for textView
+        textView.font = UIFont.systemFont(ofSize: 20) // Adjust the font size as needed
+
         // Position the textView below the grid
         textView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(textView)
-        
         NSLayoutConstraint.activate([
             textView.topAnchor.constraint(equalTo: view.topAnchor, constant: totalGridHeight + 20),
             textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             textView.heightAnchor.constraint(equalToConstant: 135)
         ])
+        
+        // Set up the resultTextView
+        resultTextView.font = UIFont.systemFont(ofSize: 20) // Adjust the font size as needed
+        resultTextView.backgroundColor = .white
+        resultTextView.layer.borderColor = UIColor.black.cgColor
+        resultTextView.layer.borderWidth = 1.0
+        resultTextView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            resultTextView.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: -200),
+            resultTextView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            resultTextView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            resultTextView.heightAnchor.constraint(equalToConstant: 135)
+        ])
+
+        // Bring resultTextView to the front
+        view.bringSubviewToFront(resultTextView)
     }
 
     func scaleUpOneByOne(index: Int) {
@@ -118,7 +135,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         resetScales()
     }
 
-
     @IBAction func recordButtonTapped() {
         if audioEngine.isRunning {
             audioEngine.stop()
@@ -139,6 +155,8 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             }
         }
     }
+
+    // Add your SFSpeechRecognizerDelegate methods here to update resultTextView with the speech recognition results
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -211,6 +229,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                         self.count += 1
                 }
                 self.textView.text = "Names: \(self.count) " + "Mantras: \(self.count / 16) " + "Rounds: \(self.count / 1728) "
+                self.resultTextView.text = "\(text)"
                 isFinal = result.isFinal
                 print("Text \(text)")
                 
