@@ -75,7 +75,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             while self.isAnimating {
                 DispatchQueue.main.async {
                     let animation = CABasicAnimation(keyPath: "transform.scale")
-                    animation.duration = 0.5
+                    animation.duration = 0.2
                     animation.fromValue = 1.0
                     animation.toValue = 1.5
                     animation.autoreverses = true

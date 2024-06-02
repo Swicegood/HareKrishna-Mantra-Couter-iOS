@@ -16,6 +16,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		11F0199F2C0CF84A001E5E83 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Main.strings; sourceTree = "<group>"; };
 		736165982176725C0062D377 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		738998B221515C9900E378D8 /* HareKrishna-Mantra-Counter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "HareKrishna-Mantra-Counter.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		738998B521515C9900E378D8 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -172,6 +173,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				738998BA21515C9900E378D8 /* Base */,
+				11F0199F2C0CF84A001E5E83 /* en */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
