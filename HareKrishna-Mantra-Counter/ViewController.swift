@@ -31,10 +31,10 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     // MARK: View Controller Lifecycle
     public override func viewDidLoad() {
         super.viewDidLoad()
-        
+
         // Disable the record buttons until authorization has been granted.
         recordButton.isEnabled = false
-        
+
         // Create a label for each word
         for word in words {
             let label = UILabel()
@@ -42,24 +42,44 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             label.textAlignment = .center
             label.textColor = .darkText
             label.font = UIFont.systemFont(ofSize: 25)
+            label.translatesAutoresizingMaskIntoConstraints = false // Enable Auto Layout for labels
             animationLabels.append(label)
             view.addSubview(label)
         }
         
-        // Position the labels in a 4x4 grid on the screen
+        // Position the labels in a 4x4 grid on the screen using Auto Layout
         let rows = 4
         let columns = 4
         let gridWidth = view.frame.width / CGFloat(columns)
-        let gridHeight = ((view.frame.height * 0.5) / CGFloat(rows)) * 0.5
-        let topPadding: CGFloat = 100
-        
+        let gridHeight = (view.frame.height * 0.5) / CGFloat(rows)
+        let topPadding: CGFloat = 100 // Adjust padding as needed
+
         for (index, label) in animationLabels.enumerated() {
             let row = index / columns
             let column = index % columns
-            label.frame = CGRect(x: CGFloat(column) * gridWidth, y: CGFloat(row) * gridHeight + topPadding, width: gridWidth, height: gridHeight)
+            NSLayoutConstraint.activate([
+                label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: CGFloat(column) * gridWidth),
+                label.topAnchor.constraint(equalTo: view.topAnchor, constant: topPadding + CGFloat(row) * gridHeight),
+                label.widthAnchor.constraint(equalToConstant: gridWidth),
+                label.heightAnchor.constraint(equalToConstant: gridHeight)
+            ])
         }
+
+        // Calculate the total height of the grid
+        let totalGridHeight = CGFloat(rows) * gridHeight + topPadding
+        
+        // Position the textView below the grid
+        textView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(textView)
+        
+        NSLayoutConstraint.activate([
+            textView.topAnchor.constraint(equalTo: view.topAnchor, constant: totalGridHeight + 20),
+            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            textView.heightAnchor.constraint(equalToConstant: 135)
+        ])
     }
-    
+
     func scaleUpOneByOne(index: Int) {
         if index >= animationLabels.count {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
@@ -74,28 +94,50 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         }
         
         UIView.animate(withDuration: 0.4, animations: {
-            self.animationLabels[index].transform = CGAffineTransform(scaleX: 1.3, y: 1.3)
+            self.animationLabels[index].transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
         }) { _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 self.scaleUpOneByOne(index: index + 1)
             }
         }
     }
-    
+
     func resetScales() {
         for label in animationLabels {
             label.transform = CGAffineTransform.identity
         }
     }
-    
+
     func startAnimation() {
         isAnimating = true
         scaleUpOneByOne(index: 0)
     }
-    
+
     func stopAnimation() {
         isAnimating = false
         resetScales()
+    }
+
+
+    @IBAction func recordButtonTapped() {
+        if audioEngine.isRunning {
+            audioEngine.stop()
+            recognitionRequest?.endAudio()
+            self.previousText = ""
+            recordButton.isEnabled = false
+            stopAnimation()
+            recordButton.setTitle("Stopping", for: .disabled)
+        } else {
+            do {
+                if !isAnimating {
+                    startAnimation()
+                }
+                recordButton.setTitle("Stop Recording", for: [])
+                try startRecording()
+            } catch {
+                recordButton.setTitle("Recording Not Available", for: [])
+            }
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -213,31 +255,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         }
     }
     
-    // MARK: Interface Builder actions
-    
-    @IBAction func recordButtonTapped() {
-        if audioEngine.isRunning {
-            audioEngine.stop()
-            recognitionRequest?.endAudio()
-            self.previousText = ""
-            recordButton.isEnabled = false
-            stopAnimation()
-            recordButton.setTitle("Stopping", for: .disabled)
-        } else {
-            do {
-                if !isAnimating {
-                    startAnimation()
-                }
-                recordButton.setTitle("Stop Recording", for: [])
-                try startRecording()
-            } catch {
-                recordButton.setTitle("Recording Not Available", for: [])
-            }
-        }
-    }
-    
-    
-    
+ 
     @IBAction func resetdButtonTapped() {
         let alert = UIAlertController(title: "Are You Sure?", message: "Are you sure you want to reset the count?", preferredStyle: .alert)
         let yesAction = UIAlertAction(title: "Yes", style: .default) { (action) in
