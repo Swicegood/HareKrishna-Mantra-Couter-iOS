@@ -8,6 +8,12 @@ The root view controller that provides a button to start and stop recording, and
 import UIKit
 import Speech
 
+extension UIColor {
+    static var parchmentDark: UIColor {
+        return UIColor(named: "ParchmentDark") ?? UIColor.darkGray // Fallback color if not found
+    }
+}
+
 public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     // MARK: Properties
     private var count = 0
@@ -25,7 +31,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     
     // MARK: Animation Vars
     var animationLabels:[UILabel] = []
-    var words = ["Hare", "Krishna", "Hare", "Krishna", "Krishna", "Krishna", "Hare", "Hare", "Hare", "Rama", "Hare", "Rama", "Rama", "Rama", "Hare", "Hare"]
+    var words = ["Hare", "Krsna", "Hare", "Krsna", "Krsna", "Krsna", "Hare", "Hare", "Hare", "Rama", "Hare", "Rama", "Rama", "Rama", "Hare", "Hare"]
     var isAnimating = false
     
     // MARK: View Controller Lifecycle
@@ -98,30 +104,36 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     }
 
     func scaleUpOneByOne(index: Int) {
-        if index >= animationLabels.count {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                self.resetScales()
+        DispatchQueue.global(qos: .userInitiated).async {
+            if index >= self.animationLabels.count {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    if self.isAnimating {
-                        self.scaleUpOneByOne(index: 0)
+                    self.resetScales()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        if self.isAnimating {
+                            self.scaleUpOneByOne(index: 0)
+                        }
                     }
                 }
+                return
             }
-            return
-        }
-        
-        UIView.animate(withDuration: 0.4, animations: {
-            self.animationLabels[index].transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
-        }) { _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                self.scaleUpOneByOne(index: index + 1)
+            
+            DispatchQueue.main.async {
+                UIView.animate(withDuration: 0.4, animations: {
+                    self.animationLabels[index].transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
+                }) { _ in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        self.scaleUpOneByOne(index: index + 1)
+                    }
+                }
             }
         }
     }
 
     func resetScales() {
-        for label in animationLabels {
-            label.transform = CGAffineTransform.identity
+        DispatchQueue.main.async {
+            for label in self.animationLabels {
+                label.transform = CGAffineTransform.identity
+            }
         }
     }
 
@@ -281,6 +293,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
            // reset the count here
            self.count = 0
            self.textView.text = "Names: \(self.count) " + "Mantras: \(self.count / 16) " + "Rounds: \(self.count / 1728) "
+            self.resultTextView.text = ""
         }
         let noAction = UIAlertAction(title: "No", style: .cancel, handler: nil)
         alert.addAction(yesAction)
