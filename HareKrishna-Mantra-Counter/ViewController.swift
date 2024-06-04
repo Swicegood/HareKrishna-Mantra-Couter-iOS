@@ -41,6 +41,15 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         // Disable the record buttons until authorization has been granted.
         recordButton.isEnabled = false
 
+        // Add a custom status bar background view
+         let statusBarHeight = UIApplication.shared.statusBarFrame.height
+         let statusBarBackgroundView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: statusBarHeight))
+         statusBarBackgroundView.backgroundColor = .parchmentDark
+         view.addSubview(statusBarBackgroundView)
+
+         // Set the background color to match the status bar color
+        view.backgroundColor = UIColor(named: "Parchment")
+        
         // Create a label for each word
         for word in words {
             let label = UILabel()
@@ -103,6 +112,11 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         view.bringSubviewToFront(resultTextView)
     }
 
+    // Override preferredStatusBarStyle to set the desired status bar style
+    public override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent // Set to .darkContent if you want dark text on a light background
+    }
+    
     func scaleUpOneByOne(index: Int) {
         DispatchQueue.global(qos: .userInitiated).async {
             if index >= self.animationLabels.count {
@@ -301,4 +315,5 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         present(alert, animated: true, completion: nil)
     }
 }
+
 
