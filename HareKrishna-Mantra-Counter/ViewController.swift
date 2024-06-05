@@ -28,6 +28,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     @IBOutlet var recordButton: UIButton!
     @IBOutlet weak var countLabel: UILabel!
     @IBOutlet var Button: UIButton!
+    @IBOutlet weak var infoButton: UIButton! // Outlet for the info button
     
     // MARK: Animation Vars
     var animationLabels:[UILabel] = []
@@ -314,6 +315,14 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         alert.addAction(noAction)
         present(alert, animated: true, completion: nil)
     }
+    
+    // Action for the info button
+    @IBAction func infoButtonTapped(_ sender: UIButton) {
+        let alert = UIAlertController(title: "Chanting the holy names of the Mahamantra,", message: "is a profound and transformative spiritual practice rooted in the ancient tradition of Bhakti Yoga. This mantra, composed of sacred names of the Supreme Divine, is chanted to evoke a deep connection with God, purify the mind, and awaken one's spiritual consciousness. By repeating these names with sincerity and devotion, one can experience inner peace, joy, and a sense of unity with the divine. This practice is accessible to everyone, regardless of background or prior knowledge, and can be performed anywhere, making it a powerful tool for personal and spiritual growth.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        present(alert, animated: true, completion: nil)
+    }
+
 }
 
 
