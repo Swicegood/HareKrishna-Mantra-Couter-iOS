@@ -57,7 +57,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             label.text = word
             label.textAlignment = .center
             label.textColor = .darkText
-            label.font = UIFont.systemFont(ofSize: 25)
+            label.font = UIFont(name: "Tangerine-Bold", size: 35)
             label.translatesAutoresizingMaskIntoConstraints = false // Enable Auto Layout for labels
             animationLabels.append(label)
             view.addSubview(label)
