@@ -19,7 +19,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="4aq-UO-WOf">
-                                <rect key="frame" x="16" y="763" width="361" height="35"/>
+                                <rect key="frame" x="16" y="763" width="343" height="35"/>
                                 <state key="normal" title=" Start Recording!">
                                     <color key="titleColor" red="0.55670103092783507" green="0.32578154707195861" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     <imageReference key="image" image="mic.fill.badge.plus" catalog="system" symbolScale="large"/>
@@ -43,7 +43,7 @@
                                 <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
                             </textView>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1v6-RF-twk">
-                                <rect key="frame" x="319" y="767" width="44" height="27"/>
+                                <rect key="frame" x="319" y="767" width="26" height="27"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="27" id="Xzd-ic-Gd6"/>
                                 </constraints>
@@ -53,8 +53,8 @@
                                     <action selector="resetdButtonTapped" destination="BYZ-38-t0r" eventType="touchUpInside" id="Bli-8z-HNG"/>
                                 </connections>
                             </button>
-                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" editable="NO" textAlignment="natural" selectable="NO" translatesAutoresizingMaskIntoConstraints="NO" id="n1D-GC-6tq">
-                                <rect key="frame" x="16" y="383" width="361" height="372"/>
+                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" misplaced="YES" editable="NO" textAlignment="natural" selectable="NO" translatesAutoresizingMaskIntoConstraints="NO" id="n1D-GC-6tq">
+                                <rect key="frame" x="16" y="387" width="361" height="48"/>
                                 <color key="backgroundColor" red="0.92941176469999998" green="0.78823529410000004" blue="0.57254901960000004" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="343" id="nbT-0S-Uqk"/>
@@ -73,6 +73,10 @@
                                     <action selector="infoButtonTapped:" destination="BYZ-38-t0r" eventType="touchUpInside" id="YFU-4t-47P"/>
                                 </connections>
                             </button>
+                            <slider opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="0.5" minValue="0.0" maxValue="1" translatesAutoresizingMaskIntoConstraints="NO" id="8pO-uG-5cc">
+                                <rect key="frame" x="27" y="450" width="334" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                            </slider>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" red="0.92941176470588238" green="0.78823529411764703" blue="0.5725490196078431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
@@ -106,7 +110,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="132" y="133.5832083958021"/>
+            <point key="canvasLocation" x="130.53435114503816" y="133.09859154929578"/>
         </scene>
     </scenes>
     <resources>
