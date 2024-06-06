@@ -27,28 +27,30 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     @IBOutlet var resultTextView: UITextView! // Outlet for the second UITextView
     @IBOutlet var recordButton: UIButton!
     @IBOutlet weak var countLabel: UILabel!
-    @IBOutlet var Button: UIButton!
+    @IBOutlet var clearButton: UIButton!
     @IBOutlet weak var infoButton: UIButton! // Outlet for the info button
+    @IBOutlet weak var animationSpeedSlider: UISlider! // Outlet for the slider
     
     // MARK: Animation Vars
     var animationLabels:[UILabel] = []
     var words = ["Hare", "Krsna", "Hare", "Krsna", "Krsna", "Krsna", "Hare", "Hare", "Hare", "Rama", "Hare", "Rama", "Rama", "Rama", "Hare", "Hare"]
     var isAnimating = false
+    var animationDuration: Double = 0.4 // Default animation duration
     
     // MARK: View Controller Lifecycle
     public override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         // Disable the record buttons until authorization has been granted.
         recordButton.isEnabled = false
-
+        
         // Add a custom status bar background view
-         let statusBarHeight = UIApplication.shared.statusBarFrame.height
-         let statusBarBackgroundView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: statusBarHeight))
-         statusBarBackgroundView.backgroundColor = .parchmentDark
-         view.addSubview(statusBarBackgroundView)
-
-         // Set the background color to match the status bar color
+        let statusBarHeight = UIApplication.shared.statusBarFrame.height
+        let statusBarBackgroundView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: statusBarHeight))
+        statusBarBackgroundView.backgroundColor = .parchmentDark
+        view.addSubview(statusBarBackgroundView)
+        
+        // Set the background color to match the status bar color
         view.backgroundColor = UIColor(named: "Parchment")
         
         // Create a label for each word
@@ -69,7 +71,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         let gridWidth = view.frame.width / CGFloat(columns)
         let gridHeight = (view.frame.height * 0.3) / CGFloat(rows)
         let topPadding: CGFloat = 100 // Adjust padding as needed
-
+        
         for (index, label) in animationLabels.enumerated() {
             let row = index / columns
             let column = index % columns
@@ -80,21 +82,18 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 label.heightAnchor.constraint(equalToConstant: gridHeight)
             ])
         }
-
+        
         // Calculate the total height of the grid
         let totalGridHeight = CGFloat(rows) * gridHeight + topPadding
         
         // Set text size for textView
         textView.font = UIFont.systemFont(ofSize: 20) // Adjust the font size as needed
-
-        // Position the textView below the grid
-        textView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            textView.topAnchor.constraint(equalTo: view.topAnchor, constant: totalGridHeight + 20),
-            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            textView.heightAnchor.constraint(equalToConstant: 135)
-        ])
+        
+        
+        animationSpeedSlider.value = Float(2.0 - animationDuration) // Reverse the value
+        animationSpeedSlider.minimumValue = 1.5
+        animationSpeedSlider.maximumValue = 2.0
+        animationSpeedSlider.value = Float(animationDuration) // Set default value
         
         // Set up the resultTextView
         resultTextView.font = UIFont.systemFont(ofSize: 20) // Adjust the font size as needed
@@ -102,17 +101,11 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         resultTextView.layer.borderColor = UIColor.black.cgColor
         resultTextView.layer.borderWidth = 1.0
         resultTextView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            resultTextView.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: -200),
-            resultTextView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            resultTextView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            resultTextView.heightAnchor.constraint(equalToConstant: 135)
-        ])
-
+        
         // Bring resultTextView to the front
         view.bringSubviewToFront(resultTextView)
     }
-
+    
     // Override preferredStatusBarStyle to set the desired status bar style
     public override var preferredStatusBarStyle: UIStatusBarStyle {
         return .lightContent // Set to .darkContent if you want dark text on a light background
@@ -121,9 +114,9 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     func scaleUpOneByOne(index: Int) {
         DispatchQueue.global(qos: .userInitiated).async {
             if index >= self.animationLabels.count {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + self.animationDuration) {
                     self.resetScales()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + self.animationDuration) {
                         if self.isAnimating {
                             self.scaleUpOneByOne(index: 0)
                         }
@@ -133,16 +126,17 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             }
             
             DispatchQueue.main.async {
-                UIView.animate(withDuration: 0.4, animations: {
+                UIView.animate(withDuration: self.animationDuration, animations: {
                     self.animationLabels[index].transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
                 }) { _ in
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + self.animationDuration) {
                         self.scaleUpOneByOne(index: index + 1)
                     }
                 }
             }
         }
     }
+
 
     func resetScales() {
         DispatchQueue.main.async {
@@ -321,6 +315,10 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         let alert = UIAlertController(title: "Chanting the holy names of the Mahamantra,", message: "is a profound and transformative spiritual practice rooted in the ancient tradition of Bhakti Yoga. This mantra, composed of sacred names of the Supreme Divine, is chanted to evoke a deep connection with God, purify the mind, and awaken one's spiritual consciousness. By repeating these names with sincerity and devotion, one can experience inner peace, joy, and a sense of unity with the divine. This practice is accessible to everyone, regardless of background or prior knowledge, and can be performed anywhere, making it a powerful tool for personal and spiritual growth.", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
         present(alert, animated: true, completion: nil)
+    }
+    
+    @IBAction func sliderValueChanged(_ sender: UISlider) {
+        animationDuration = 2.0 - Double(sender.value)
     }
 
 }
