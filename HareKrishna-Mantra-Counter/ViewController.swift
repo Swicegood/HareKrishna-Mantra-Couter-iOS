@@ -22,6 +22,9 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
+    private var isDisplayingSanskritText = true
+    private var sanskritText = ""
+    private var wordBag = [String]()
     
     @IBOutlet var textView: UITextView! // Outlet for the first UITextView
     @IBOutlet var resultTextView: UITextView! // Outlet for the second UITextView
@@ -94,6 +97,12 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         animationSpeedSlider.minimumValue = 1.5
         animationSpeedSlider.maximumValue = 2.0
         animationSpeedSlider.value = Float(animationDuration) // Set default value
+        
+        
+        // Add tap gesture recognizer to resultTextView
+            let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(resultTextViewTapped))
+            resultTextView.addGestureRecognizer(tapGestureRecognizer)
+            resultTextView.isUserInteractionEnabled = true
         
         // Set up the resultTextView
         resultTextView.font = UIFont.systemFont(ofSize: 20) // Adjust the font size as needed
@@ -237,23 +246,56 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             recognitionRequest.requiresOnDeviceRecognition = false
         }
  
-        
         // Create a recognition task for the speech recognition session.
         // Keep a reference to the task so that it can be canceled.
         recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { result, error in
             var isFinal = false
-            
-            
-            if let result = result, let transcription: SFTranscription? = result.bestTranscription, let text = transcription?.formattedString {
+
+            if let result = result {
+                let transcription = result.bestTranscription
+                let text = transcription.formattedString
                 let words = text.components(separatedBy: .whitespacesAndNewlines)
-                if let lastWord = words.last, lastWord.contains("खाद्य") || lastWord.contains("कृष्णा") || lastWord.contains("हद") || lastWord.contains("राम") || lastWord.contains("हरे") || lastWord.contains("है") || lastWord.contains("फ़ैशन"){
-                        self.count += 1
+                
+                if let lastWord = words.last, lastWord.contains("खाद्य") || lastWord.contains("कृष्णा") || lastWord.contains("हद") || lastWord.contains("राम") || lastWord.contains("हरे") || lastWord.contains("है") || lastWord.contains("फ़ैशन") || lastWord.contains("और") || lastWord.contains("रामा") || lastWord.contains("होगा") || lastWord.contains("वहाँ") || lastWord.contains("गाँव") {
+                    self.count += 1
+                    if !isFinal{
+                        self.wordBag.append(lastWord)
+                        print("WordBag", self.wordBag)
+                    }
                 }
-                self.textView.text = "Names: \(self.count) " + "Mantras: \(self.count / 16) " + "Rounds: \(self.count / 1728) "
-                self.resultTextView.text = "\(text)"
+
+                // Ensure wordBag is exactly size 32 by padding or truncating
+                if self.wordBag.count > 32 {
+                    self.wordBag = Array(self.wordBag.suffix(32)) // Truncate to last 32 words
+                } else {
+                    self.wordBag = Array(repeating: "", count: 32 - self.wordBag.count) + self.wordBag // Pad with empty strings
+                }
+
+                self.textView.text = "Correct Mantras: \(self.count / 16)"
+                let replacedText = self.replaceHindiWords(in: self.wordBag.joined(separator: " "))
+                
+                self.sanskritText = self.wordBag.joined(separator: " ")
+                if self.isDisplayingSanskritText {
+                    self.resultTextView.text = self.sanskritText
+                } else {
+                    self.resultTextView.text = replacedText
+                }
+                
+                let wordBagFirst = replacedText.split(separator: " ").prefix(16).map { String($0) }
+                let wordBagSecond = replacedText.split(separator: " ").suffix(16).map { String($0) }
+                
+                // Process the first 16 words
+                let resultWordsFirst = Array(wordBagFirst)
+                let missingWordIndicesFirst = self.findMissingWords(gridWords: self.words, resultWords: resultWordsFirst)
+                self.highlightMissingWords(indices: missingWordIndicesFirst)
+                
+                // Process the last 16 words
+                let resultWordsSecond = Array(wordBagSecond)
+                let missingWordIndicesSecond = self.findMissingWords(gridWords: self.words, resultWords: resultWordsSecond)
+                self.highlightMissingWords(indices: missingWordIndicesSecond)
+
                 isFinal = result.isFinal
                 print("Text \(text)")
-                
             }
             
            
@@ -301,7 +343,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         let yesAction = UIAlertAction(title: "Yes", style: .default) { (action) in
            // reset the count here
            self.count = 0
-           self.textView.text = "Names: \(self.count) " + "Mantras: \(self.count / 16) " + "Rounds: \(self.count / 1728) "
+           self.textView.text = "Correct Mantras: \(self.count / 16)"
             self.resultTextView.text = ""
         }
         let noAction = UIAlertAction(title: "No", style: .cancel, handler: nil)
@@ -321,6 +363,112 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         animationDuration = 2.0 - Double(sender.value)
     }
 
+    
+    func findMissingWords(gridWords: [String], resultWords: [String]) -> [Int] {
+        let rows = gridWords.count + 1
+        let columns = resultWords.count + 1
+        var matrix = initializeMatrix(rows: rows, columns: columns)
+        fillMatrix(matrix: &matrix, gridWords: gridWords, resultWords: resultWords)
+        let missingWordIndices = traceback(matrix: matrix, gridWords: gridWords, resultWords: resultWords)
+        return missingWordIndices
+    }
+
+    func initializeMatrix(rows: Int, columns: Int) -> [[Int]] {
+        var matrix = Array(repeating: Array(repeating: 0, count: columns), count: rows)
+        for i in 1..<rows {
+            matrix[i][0] = matrix[i-1][0] - 1 // gap penalty
+        }
+        for j in 1..<columns {
+            matrix[0][j] = matrix[0][j-1] - 1 // gap penalty
+        }
+        return matrix
+    }
+
+    func fillMatrix(matrix: inout [[Int]], gridWords: [String], resultWords: [String]) {
+        for i in 1..<matrix.count {
+            for j in 1..<matrix[i].count {
+                let match = matrix[i-1][j-1] + (gridWords[i-1] == resultWords[j-1] ? 1 : -1)
+                let delete = matrix[i-1][j] - 1 // gap penalty
+                let insert = matrix[i][j-1] - 1 // gap penalty
+                matrix[i][j] = max(match, delete, insert)
+            }
+        }
+    }
+
+    func traceback(matrix: [[Int]], gridWords: [String], resultWords: [String]) -> [Int] {
+        var i = gridWords.count
+        var j = resultWords.count
+        var missingWordIndices = [Int]()
+        
+        while i > 0 && j > 0 {
+            if gridWords[i-1] == resultWords[j-1] {
+                i -= 1
+                j -= 1
+            } else if matrix[i][j] == matrix[i-1][j] - 1 {
+                missingWordIndices.append(i-1)
+                i -= 1
+            } else if matrix[i][j] == matrix[i][j-1] - 1 {
+                j -= 1
+            } else {
+                i -= 1
+                j -= 1
+            }
+        }
+        
+        while i > 0 {
+            missingWordIndices.append(i-1)
+            i -= 1
+        }
+        
+        return missingWordIndices.reversed()
+    }
+    
+    func highlightMissingWords(indices: [Int]) {
+        for index in indices {
+            if index < animationLabels.count {
+                let originalColor = animationLabels[index].textColor
+                animationLabels[index].textColor = .red
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    self.animationLabels[index].textColor = originalColor
+                }
+            }
+        }
+    }
+    
+    func replaceHindiWords(in text: String) -> String {
+        var replacedText = text
+        replacedText = replacedText.replacingOccurrences(of: "हरे", with: "Hare")
+        replacedText = replacedText.replacingOccurrences(of: "अबे", with: "Hare")
+        replacedText = replacedText.replacingOccurrences(of: "और", with: "Hare")
+        replacedText = replacedText.replacingOccurrences(of: "कृष्णा", with: "Krsna")
+        replacedText = replacedText.replacingOccurrences(of: "एक", with: "Krsna")
+        replacedText = replacedText.replacingOccurrences(of: "राम", with: "Rama")
+        replacedText = replacedText.replacingOccurrences(of: "वहाँ", with: "Rama")
+        replacedText = replacedText.replacingOccurrences(of: "गाँव", with: "Rama")
+        replacedText = replacedText.replacingOccurrences(of: "रामा", with: "Rama")
+        replacedText = replacedText.replacingOccurrences(of: "होगा", with: "Rama")
+        return replacedText
+    }
+    
+    @objc func resultTextViewTapped() {
+        if isDisplayingSanskritText {
+            let resultWords = resultTextView.text.components(separatedBy: .whitespacesAndNewlines)
+            resultTextView.text = resultWords.joined(separator: " ")
+            showMessage("Characters are now Roman")
+        } else {
+            resultTextView.text = sanskritText // Assuming `originalText` holds the original text
+            showMessage("Language changed to Sanskrit")
+        }
+        isDisplayingSanskritText.toggle()
+    }
+    
+    func showMessage(_ message: String) {
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        self.present(alert, animated: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            alert.dismiss(animated: true, completion: nil)
+        }
+    }
 }
 
 
