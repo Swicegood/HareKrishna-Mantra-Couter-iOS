@@ -27,7 +27,8 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     private var wordBag = [String]()
     private var previousWords = [String]()
     private var recognitionTimer: Timer?
-    private let recognitionDuration: TimeInterval = 45.0 // 15 seconds
+    private let recognitionDuration: TimeInterval = 15.0 // 15 seconds
+    private var firstRun = true
     
     @IBOutlet var textView: UITextView! // Outlet for the first UITextView
     @IBOutlet var resultTextView: UITextView! // Outlet for the second UITextView
@@ -258,7 +259,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 let transcription = result.bestTranscription
                 let text = transcription.formattedString
                 var words = text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
-                
+                self.count += 1
 //                if words.count > 32 {
 //                    words = Array(words.suffix(32)) // Truncate to last 32 words
 //                } else {
@@ -282,14 +283,15 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
 //                    }
 //                }
 //                for k in divergencePoint..<alignedCurrent.count {
-//                    if alignedCurrent[k] != "" {
+//                    if alignedCurrent[k] != "-" {
 //                        newWords.append(alignedCurrent[k])
 //                    }
 //                }
+//                
+//                print("New Words", newWords)
 
-//                self.previousWords = words
+                self.previousWords = words
                 self.wordBag = words
-                print("WordBag", self.wordBag)
 
                 if self.wordBag.count > 32 {
                     self.wordBag = Array(self.wordBag.suffix(32)) // Truncate to last 32 words
@@ -297,35 +299,41 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                     self.wordBag = Array(repeating: "", count: 32 - self.wordBag.count) + self.wordBag // Pad with empty strings
                 }
 
-                var replacementCount = 0
-                let replacedText = self.replaceEnglishWords(in: self.wordBag.joined(separator: " "), counter: &replacementCount)
-                self.count += replacementCount
+                var unused = 0
+                let replacedText = self.replaceEnglishWords(in: self.wordBag.joined(separator: " "), counter: &unused)
+                
+                if (words.count - replacedText.count) > 0 {
+                    self.count -= 1
+                }
+                
+                let doubleReplacedText = self.replaceRomanWithSanskrit (in: replacedText, counter: &unused)
                 
                 self.textView.text = "Correct Mantras: \(self.count / 16)"
                 
                 self.sanskritText = self.wordBag.joined(separator: " ")
                 if self.isDisplayingSanskritText {
-                    self.resultTextView.text = self.sanskritText
+                    self.resultTextView.text = doubleReplacedText
                 } else {
                     self.resultTextView.text = replacedText
                 }
                 
-                let wordBagFirst = replacedText.split(separator: " ").prefix(16).map { String($0) }
-                let wordBagSecond = replacedText.split(separator: " ").suffix(16).map { String($0) }
-                
-                let resultWordsFirst = Array(wordBagFirst)
-                let missingWordIndicesFirst = self.findMissingWords(gridWords: self.words, resultWords: resultWordsFirst)
-                self.highlightMissingWords(indices: missingWordIndicesFirst)
-                
-                let resultWordsSecond = Array(wordBagSecond)
-                let missingWordIndicesSecond = self.findMissingWords(gridWords: self.words, resultWords: resultWordsSecond)
-                self.highlightMissingWords(indices: missingWordIndicesSecond)
+//                let wordBagFirst = replacedText.split(separator: " ").prefix(16).map { String($0) }
+//                let wordBagSecond = replacedText.split(separator: " ").suffix(16).map { String($0) }
+//                
+//                let resultWordsFirst = Array(wordBagFirst)
+//                let missingWordIndicesFirst = self.findMissingWords(gridWords: self.words, resultWords: resultWordsFirst)
+//                self.highlightMissingWords(indices: missingWordIndicesFirst)
+//                
+//                let resultWordsSecond = Array(wordBagSecond)
+//                let missingWordIndicesSecond = self.findMissingWords(gridWords: self.words, resultWords: resultWordsSecond)
+//                self.highlightMissingWords(indices: missingWordIndicesSecond)
 
                 isFinal = result.isFinal
                 print("Text \(text)")
             }
             
             if error != nil || isFinal {
+                
                 self.stopRecognitionTimer()
                 self.audioEngine.stop()
                 inputNode.removeTap(onBus: 0)
@@ -348,7 +356,10 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         try audioEngine.start()
         
         // Let the user know to start talking.
-        textView.text = "(Go ahead, I'm listening)"
+        if firstRun{
+            textView.text = "(Go ahead, I'm listening)"
+            firstRun = false
+        }
         
         // Start the timer to restart recognition every 15 seconds
         startRecognitionTimer()
@@ -548,7 +559,8 @@ func needlemanWunsch(_ seq1: [String], _ seq2: [String]) -> ([String], [String])
         // Words that sound like "Hare"
         let hareWords = [
             "hi", "had", "a", "i", "hade", "hadi", "huddy", "hee", "hai",
-            "hello", "today", "hooray", "honey", "hurry", "hari", "how", "are"
+            "hello", "today", "hooray", "honey", "hurry", "hari", "how", "are",
+            "hoodie"
         ]
 
         // Words that sound like "Krishna"
@@ -582,6 +594,11 @@ func needlemanWunsch(_ seq1: [String], _ seq2: [String]) -> ([String], [String])
         replacedText = filteredWords.joined(separator: " ")
 
         return replacedText
+    }
+    
+    func replaceRomanWithSanskrit(in text: String, counter: inout Int) -> String {
+        
+        return text.replacingOccurrences(of: "Hare", with: "हरे").replacingOccurrences(of: "Krishna", with: "कृष्णा").replacingOccurrences(of: "Rama", with: "राम")
     }
     
     @objc func resultTextViewTapped() {
