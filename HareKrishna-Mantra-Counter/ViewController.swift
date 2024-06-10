@@ -391,7 +391,18 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     }
     
     @IBAction func sliderValueChanged(_ sender: UISlider) {
-        animationDuration = 2.0 - Double(sender.value)
+        // Calculate the new animation duration
+        let sliderMaxValue: Float = 2.0
+        let maxSpeedValue: Float = 1.85 // Adjust as needed for the fastest speed
+
+        // Rescale the slider value: map 0.0 to 0.75 to the range [0, maxSpeedValue]
+        let scaledValue = min(sender.value / (3.0 / 4.0), 1.0)
+        
+        // Apply an exponential scaling to make the change more noticeable towards the end
+        let newAnimationDuration = pow(Double(scaledValue), 3.0) * Double(maxSpeedValue)
+        
+        // Update the animation duration
+        animationDuration = 2.0 - newAnimationDuration
     }
 
     
