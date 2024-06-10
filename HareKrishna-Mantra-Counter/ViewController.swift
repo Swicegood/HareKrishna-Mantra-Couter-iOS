@@ -18,7 +18,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     // MARK: Properties
     private var count = 0
     private var previousText = ""
-    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "hi-IN"))!
+    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))!
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
@@ -27,7 +27,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     private var wordBag = [String]()
     private var previousWords = [String]()
     private var recognitionTimer: Timer?
-    private let recognitionDuration: TimeInterval = 15.0 // 15 seconds
+    private let recognitionDuration: TimeInterval = 45.0 // 15 seconds
     
     @IBOutlet var textView: UITextView! // Outlet for the first UITextView
     @IBOutlet var resultTextView: UITextView! // Outlet for the second UITextView
@@ -259,36 +259,36 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 let text = transcription.formattedString
                 var words = text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
                 
-                if words.count > 32 {
-                    words = Array(words.suffix(32)) // Truncate to last 32 words
-                } else {
-                    words = Array(repeating: "", count: 32 - words.count) + words // Pad with empty strings
-                }
+//                if words.count > 32 {
+//                    words = Array(words.suffix(32)) // Truncate to last 32 words
+//                } else {
+//                    words = Array(repeating: "", count: 32 - words.count) + words // Pad with empty strings
+//                }
+//
+//                if self.previousWords.count > 32 {
+//                    self.previousWords = Array(self.previousWords.suffix(32)) // Truncate to last 32 words
+//                } else {
+//                    self.previousWords = Array(repeating: "", count: 32 - self.previousWords.count) + self.previousWords // Pad with empty strings
+//                }
+//                
+//                let (alignedPrevious, alignedCurrent) = self.needlemanWunsch(self.previousWords, words)
+//                
+//                var newWords = [String]()
+//                var divergencePoint = alignedPrevious.count
+//                for k in 0..<alignedPrevious.count {
+//                    if alignedPrevious[k] != alignedCurrent[k] {
+//                        divergencePoint = k
+//                        break
+//                    }
+//                }
+//                for k in divergencePoint..<alignedCurrent.count {
+//                    if alignedCurrent[k] != "" {
+//                        newWords.append(alignedCurrent[k])
+//                    }
+//                }
 
-                if self.previousWords.count > 32 {
-                    self.previousWords = Array(self.previousWords.suffix(32)) // Truncate to last 32 words
-                } else {
-                    self.previousWords = Array(repeating: "", count: 32 - self.previousWords.count) + self.previousWords // Pad with empty strings
-                }
-                
-                let (alignedPrevious, alignedCurrent) = self.needlemanWunsch(self.previousWords, words)
-                
-                var newWords = [String]()
-                var divergencePoint = alignedPrevious.count
-                for k in 0..<alignedPrevious.count {
-                    if alignedPrevious[k] != alignedCurrent[k] {
-                        divergencePoint = k
-                        break
-                    }
-                }
-                for k in divergencePoint..<alignedCurrent.count {
-                    if alignedCurrent[k] != "" {
-                        newWords.append(alignedCurrent[k])
-                    }
-                }
-
-                self.previousWords = words
-                self.wordBag.append(contentsOf: newWords)
+//                self.previousWords = words
+                self.wordBag = words
                 print("WordBag", self.wordBag)
 
                 if self.wordBag.count > 32 {
@@ -298,11 +298,8 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 }
 
                 var replacementCount = 0
-                let replacedText = self.replaceHindiWords(in: self.wordBag.joined(separator: " "), counter: &replacementCount)
-                self.count += replacementCount
-                
-                self.textView.text = "Correct Mantras: \(self.count / 16)"
-                
+                let replacedText = self.replaceEnglishWords(in: self.wordBag.joined(separator: " "), counter: &unused)
+   
                 self.sanskritText = self.wordBag.joined(separator: " ")
                 if self.isDisplayingSanskritText {
                     self.resultTextView.text = self.sanskritText
@@ -320,6 +317,10 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 let resultWordsSecond = Array(wordBagSecond)
                 let missingWordIndicesSecond = self.findMissingWords(gridWords: self.words, resultWords: resultWordsSecond)
                 self.highlightMissingWords(indices: missingWordIndicesSecond)
+                
+                
+                
+                self.textView.text = "Correct Mantras: \(self.count / 16)"
 
                 isFinal = result.isFinal
                 print("Text \(text)")
@@ -542,52 +543,45 @@ func needlemanWunsch(_ seq1: [String], _ seq2: [String]) -> ([String], [String])
         }
     }
     
-    func replaceHindiWords(in text: String, counter: inout Int) -> String {
-        var replacedText = text
-        let replacements: [(String, String)] = [
-            ("हरे", "Hare"),
-            ("अबे", "Hare"),
-            ("और", "Hare"),
-            ("कृष्णा", "Krsna"),
-            ("एक", "Krsna"),
-            ("राम", "Rama"),
-            ("वहाँ", "Rama"),
-            ("गाँव", "Rama"),
-            ("रामा", "Rama"),
-            ("होगा", "Rama"),
-            ("वो", "Rama"),
-            ("रहा", "Rama"),
-            ("हूँ", "Rama"),
-            ("पे", "Rama"),
-            ("तो", "Rama"),
-            ("अरे", "Hare"),
-            ("अभी", "Hare"),
-            ("हम", "Hare"),
-            ("रिश्वत", "Hare"),
-            ("भी", "Hare"),
-            ("ख़ुश", "Hare"),
-            ("रहे", "Hare"),
-            ("रही", "Hare"),
-            ("हो", "Hare"),
-            ("गयी", "Hare"),
-            ("देख", "Hare"),
-            ("लग", "Hare"),
-            ("फिर", "Hare"),
-            ("है", "Hare"),
-            ("कृष्ण", "Krishna"),
-            ("कृष्णा", "Krishna"),
-            ("देवी", "Krishna"),
-            ("अभिषेक", "Krishna")
+    func replaceEnglishWords(in text: String, counter: inout Int) -> String {
+        var replacedText = text.lowercased()
+
+        // Words that sound like "Hare"
+        let hareWords = [
+            "hi", "had", "a", "i", "hade", "hadi", "huddy", "hee", "hai",
+            "hello", "today", "hooray", "honey", "hurry", "hari", "how", "are"
         ]
 
-        for (hindiWord, englishWord) in replacements {
-            let occurrences = replacedText.components(separatedBy: hindiWord).count - 1
-            if occurrences > 0 {
-                counter += occurrences
-                replacedText = replacedText.replacingOccurrences(of: hindiWord, with: englishWord)
+        // Words that sound like "Krishna"
+        let krishnaWords = [
+            "krishna", "krish", "christian"
+        ]
+
+        // Words that sound like "Rama"
+        let ramaWords = [
+            "rama"
+        ]
+
+        var wordCounts: [String: Int] = ["Hare": 0, "Krishna": 0, "Rama": 0]
+        var filteredWords: [String] = []
+
+        let words = replacedText.components(separatedBy: .whitespacesAndNewlines)
+        for word in words {
+            if hareWords.contains(word) {
+                filteredWords.append("Hare")
+                wordCounts["Hare"]! += 1
+            } else if krishnaWords.contains(word) {
+                filteredWords.append("Krishna")
+                wordCounts["Krishna"]! += 1
+            } else if ramaWords.contains(word) {
+                filteredWords.append("Rama")
+                wordCounts["Rama"]! += 1
             }
         }
-        
+
+        counter += wordCounts["Hare"]! + wordCounts["Krishna"]! + wordCounts["Rama"]!
+        replacedText = filteredWords.joined(separator: " ")
+
         return replacedText
     }
     
