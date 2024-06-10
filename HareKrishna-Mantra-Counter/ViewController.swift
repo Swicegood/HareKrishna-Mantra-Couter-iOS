@@ -298,8 +298,11 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 }
 
                 var replacementCount = 0
-                let replacedText = self.replaceEnglishWords(in: self.wordBag.joined(separator: " "), counter: &unused)
-   
+                let replacedText = self.replaceEnglishWords(in: self.wordBag.joined(separator: " "), counter: &replacementCount)
+                self.count += replacementCount
+                
+                self.textView.text = "Correct Mantras: \(self.count / 16)"
+                
                 self.sanskritText = self.wordBag.joined(separator: " ")
                 if self.isDisplayingSanskritText {
                     self.resultTextView.text = self.sanskritText
@@ -317,10 +320,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 let resultWordsSecond = Array(wordBagSecond)
                 let missingWordIndicesSecond = self.findMissingWords(gridWords: self.words, resultWords: resultWordsSecond)
                 self.highlightMissingWords(indices: missingWordIndicesSecond)
-                
-                
-                
-                self.textView.text = "Correct Mantras: \(self.count / 16)"
 
                 isFinal = result.isFinal
                 print("Text \(text)")
