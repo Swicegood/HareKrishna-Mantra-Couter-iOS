@@ -260,37 +260,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 let text = transcription.formattedString
                 var words = text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
                 self.count += 1
-//                if words.count > 32 {
-//                    words = Array(words.suffix(32)) // Truncate to last 32 words
-//                } else {
-//                    words = Array(repeating: "", count: 32 - words.count) + words // Pad with empty strings
-//                }
-//
-//                if self.previousWords.count > 32 {
-//                    self.previousWords = Array(self.previousWords.suffix(32)) // Truncate to last 32 words
-//                } else {
-//                    self.previousWords = Array(repeating: "", count: 32 - self.previousWords.count) + self.previousWords // Pad with empty strings
-//                }
-//                
-//                let (alignedPrevious, alignedCurrent) = self.needlemanWunsch(self.previousWords, words)
-//                
-//                var newWords = [String]()
-//                var divergencePoint = alignedPrevious.count
-//                for k in 0..<alignedPrevious.count {
-//                    if alignedPrevious[k] != alignedCurrent[k] {
-//                        divergencePoint = k
-//                        break
-//                    }
-//                }
-//                for k in divergencePoint..<alignedCurrent.count {
-//                    if alignedCurrent[k] != "-" {
-//                        newWords.append(alignedCurrent[k])
-//                    }
-//                }
-//                
-//                print("New Words", newWords)
-
-                self.previousWords = words
                 self.wordBag = words
 
                 if self.wordBag.count > 32 {
@@ -316,17 +285,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 } else {
                     self.resultTextView.text = replacedText
                 }
-                
-//                let wordBagFirst = replacedText.split(separator: " ").prefix(16).map { String($0) }
-//                let wordBagSecond = replacedText.split(separator: " ").suffix(16).map { String($0) }
-//                
-//                let resultWordsFirst = Array(wordBagFirst)
-//                let missingWordIndicesFirst = self.findMissingWords(gridWords: self.words, resultWords: resultWordsFirst)
-//                self.highlightMissingWords(indices: missingWordIndicesFirst)
-//                
-//                let resultWordsSecond = Array(wordBagSecond)
-//                let missingWordIndicesSecond = self.findMissingWords(gridWords: self.words, resultWords: resultWordsSecond)
-//                self.highlightMissingWords(indices: missingWordIndicesSecond)
 
                 isFinal = result.isFinal
                 print("Text \(text)")
@@ -436,122 +394,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         animationDuration = 2.0 - Double(sender.value)
     }
 
-    
-    func findMissingWords(gridWords: [String], resultWords: [String]) -> [Int] {
-        let rows = gridWords.count + 1
-        let columns = resultWords.count + 1
-        var matrix = initializeMatrix(rows: rows, columns: columns)
-        fillMatrix(matrix: &matrix, gridWords: gridWords, resultWords: resultWords)
-        let missingWordIndices = traceback(matrix: matrix, gridWords: gridWords, resultWords: resultWords)
-        return missingWordIndices
-    }
-
-    func initializeMatrix(rows: Int, columns: Int) -> [[Int]] {
-        var matrix = Array(repeating: Array(repeating: 0, count: columns), count: rows)
-        for i in 1..<rows {
-            matrix[i][0] = matrix[i-1][0] - 1 // gap penalty
-        }
-        for j in 1..<columns {
-            matrix[0][j] = matrix[0][j-1] - 1 // gap penalty
-        }
-        return matrix
-    }
-
-    func fillMatrix(matrix: inout [[Int]], gridWords: [String], resultWords: [String]) {
-        for i in 1..<matrix.count {
-            for j in 1..<matrix[i].count {
-                let match = matrix[i-1][j-1] + (gridWords[i-1] == resultWords[j-1] ? 1 : -1)
-                let delete = matrix[i-1][j] - 1 // gap penalty
-                let insert = matrix[i][j-1] - 1 // gap penalty
-                matrix[i][j] = max(match, delete, insert)
-            }
-        }
-    }
-
-    func traceback(matrix: [[Int]], gridWords: [String], resultWords: [String]) -> [Int] {
-        var i = gridWords.count
-        var j = resultWords.count
-        var missingWordIndices = [Int]()
-        
-        while i > 0 && j > 0 {
-            if gridWords[i-1] == resultWords[j-1] {
-                i -= 1
-                j -= 1
-            } else if matrix[i][j] == matrix[i-1][j] - 1 {
-                missingWordIndices.append(i-1)
-                i -= 1
-            } else if matrix[i][j] == matrix[i][j-1] - 1 {
-                j -= 1
-            } else {
-                i -= 1
-                j -= 1
-            }
-        }
-        
-        while i > 0 {
-            missingWordIndices.append(i-1)
-            i -= 1
-        }
-        
-        return missingWordIndices.reversed()
-    }
-
-func needlemanWunsch(_ seq1: [String], _ seq2: [String]) -> ([String], [String]) {
-    let gapPenalty = -1
-    var matrix = Array(repeating: Array(repeating: 0, count: seq2.count + 1), count: seq1.count + 1)
-    
-    for i in 0...seq1.count {
-        matrix[i][0] = i * gapPenalty
-    }
-    for j in 0...seq2.count {
-        matrix[0][j] = j * gapPenalty
-    }
-    
-    for i in 1...seq1.count {
-        for j in 1...seq2.count {
-            let match = matrix[i-1][j-1] + (seq1[i-1] == seq2[j-1] ? 1 : -1)
-            let delete = matrix[i-1][j] + gapPenalty
-            let insert = matrix[i][j-1] + gapPenalty
-            matrix[i][j] = max(match, delete, insert)
-        }
-    }
-    
-    var alignedSeq1 = [String]()
-    var alignedSeq2 = [String]()
-    var i = seq1.count
-    var j = seq2.count
-    
-    while i > 0 || j > 0 {
-        if i > 0 && j > 0 && matrix[i][j] == matrix[i-1][j-1] + (seq1[i-1] == seq2[j-1] ? 1 : -1) {
-            alignedSeq1.insert(seq1[i-1], at: 0)
-            alignedSeq2.insert(seq2[j-1], at: 0)
-            i -= 1
-            j -= 1
-        } else if i > 0 && matrix[i][j] == matrix[i-1][j] + gapPenalty {
-            alignedSeq1.insert(seq1[i-1], at: 0)
-            alignedSeq2.insert("-", at: 0)
-            i -= 1
-        } else {
-            alignedSeq1.insert("-", at: 0)
-            alignedSeq2.insert(seq2[j-1], at: 0)
-            j -= 1
-        }
-    }
-    
-    return (alignedSeq1, alignedSeq2)
-}
-    
-    func highlightMissingWords(indices: [Int]) {
-        for index in indices {
-            if index < animationLabels.count {
-                let originalColor = animationLabels[index].textColor
-                animationLabels[index].textColor = .red
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    self.animationLabels[index].textColor = originalColor
-                }
-            }
-        }
-    }
     
     func replaceEnglishWords(in text: String, counter: inout Int) -> String {
         var replacedText = text.lowercased()
