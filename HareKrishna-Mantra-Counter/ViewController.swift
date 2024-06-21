@@ -16,7 +16,7 @@ extension UIColor {
 
 public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     // MARK: Properties
-    private var count = 0
+    private var count = Int()
     private var previousText = ""
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))!
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
@@ -50,6 +50,9 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         
         // Disable the record buttons until authorization has been granted.
         recordButton.isEnabled = false
+        self.count = UserDefaults.standard.integer(forKey: "chantCount")
+        print("Count", self.count)
+        textView.text = "Correct Mantras: \(self.count / 16)"
         
         // Add a custom status bar background view
         let statusBarHeight = UIApplication.shared.statusBarFrame.height
@@ -90,9 +93,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             ])
         }
         
-        // Calculate the total height of the grid
-        let totalGridHeight = CGFloat(rows) * gridHeight + topPadding
-        
+
         // Set text size for textView
         textView.font = UIFont.systemFont(ofSize: 20) // Adjust the font size as needed
         
@@ -211,15 +212,15 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                     
                 case .denied:
                     self.recordButton.isEnabled = false
-                    self.recordButton.setTitle("User denied access to speech recognition", for: .disabled)
+                    self.recordButton.setTitle("User denied", for: .disabled)
                     
                 case .restricted:
                     self.recordButton.isEnabled = false
-                    self.recordButton.setTitle("Speech recognition restricted on this device", for: .disabled)
+                    self.recordButton.setTitle("Restricted", for: .disabled)
                     
                 case .notDetermined:
                     self.recordButton.isEnabled = false
-                    self.recordButton.setTitle("Speech recognition not yet authorized", for: .disabled)
+                    self.recordButton.setTitle("Not authorized", for: .disabled)
                     
                 default:
                     self.recordButton.isEnabled = false
@@ -259,7 +260,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 let transcription = result.bestTranscription
                 let text = transcription.formattedString
                 var words = text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
-                self.count += 1
+                self.updateCount(newCount: self.count + 1)
                 self.wordBag = words
 
                 if self.wordBag.count > 32 {
@@ -272,7 +273,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 let replacedText = self.replaceEnglishWords(in: self.wordBag.joined(separator: " "), counter: &unused)
                 
                 if (words.count - replacedText.count) > 0 {
-                    self.count -= 1
+                    self.updateCount(newCount: self.count - 1)
                 }
                 
                 let doubleReplacedText = self.replaceRomanWithSanskrit (in: replacedText, counter: &unused)
@@ -372,9 +373,8 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     @IBAction func resetdButtonTapped() {
         let alert = UIAlertController(title: "Are You Sure?", message: "Are you sure you want to reset the count?", preferredStyle: .alert)
         let yesAction = UIAlertAction(title: "Yes", style: .default) { (action) in
-           // reset the count here
-           self.count = 0
-           self.textView.text = "Correct Mantras: \(self.count / 16)"
+            // Reset the count here
+            self.updateCount(newCount: 0)
             self.resultTextView.text = ""
         }
         let noAction = UIAlertAction(title: "No", style: .cancel, handler: nil)
@@ -472,6 +472,12 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             alert.dismiss(animated: true, completion: nil)
         }
+    }
+    
+    func updateCount(newCount: Int) {
+        self.count = newCount
+        UserDefaults.standard.set(self.count, forKey: "chantCount")
+        self.textView.text = "Correct Mantras: \(self.count / 16)"
     }
     
 }
