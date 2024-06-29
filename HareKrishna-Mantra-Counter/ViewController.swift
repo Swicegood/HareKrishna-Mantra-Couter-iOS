@@ -93,21 +93,18 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             ])
         }
         
-
         // Set text size for textView
         textView.font = UIFont.systemFont(ofSize: 20) // Adjust the font size as needed
-        
         
         animationSpeedSlider.value = Float(2.0 - animationDuration) // Reverse the value
         animationSpeedSlider.minimumValue = 1.5
         animationSpeedSlider.maximumValue = 2.0
         animationSpeedSlider.value = Float(animationDuration) // Set default value
         
-        
         // Add tap gesture recognizer to resultTextView
-            let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(resultTextViewTapped))
-            resultTextView.addGestureRecognizer(tapGestureRecognizer)
-            resultTextView.isUserInteractionEnabled = true
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(resultTextViewTapped))
+        resultTextView.addGestureRecognizer(tapGestureRecognizer)
+        resultTextView.isUserInteractionEnabled = true
         
         // Set up the resultTextView
         resultTextView.font = UIFont.systemFont(ofSize: 20) // Adjust the font size as needed
@@ -118,6 +115,10 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         
         // Bring resultTextView to the front
         view.bringSubviewToFront(resultTextView)
+        
+        // Add observers for app state transitions
+        NotificationCenter.default.addObserver(self, selector: #selector(applicationWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(applicationDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
     }
     
     // Override preferredStatusBarStyle to set the desired status bar style
@@ -150,8 +151,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             }
         }
     }
-
-
+    
     func resetScales() {
         DispatchQueue.main.async {
             for label in self.animationLabels {
@@ -159,17 +159,17 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             }
         }
     }
-
+    
     func startAnimation() {
         isAnimating = true
         scaleUpOneByOne(index: 0)
     }
-
+    
     func stopAnimation() {
         isAnimating = false
         resetScales()
     }
-
+    
     @IBAction func recordButtonTapped() {
         if audioEngine.isRunning {
             audioEngine.stop()
@@ -190,21 +190,17 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             }
         }
     }
-
-    // Add your SFSpeechRecognizerDelegate methods here to update resultTextView with the speech recognition results
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        // Configure the SFSpeechRecognizer object already
-        // stored in a local member variable.
+        // Configure the SFSpeechRecognizer object already stored in a local member variable.
         speechRecognizer.delegate = self
         
         // Asynchronously make the authorization request.
         SFSpeechRecognizer.requestAuthorization { authStatus in
-
-            // Divert to the app's main thread so that the UI
-            // can be updated.
+            
+            // Divert to the app's main thread so that the UI can be updated.
             OperationQueue.main.addOperation {
                 switch authStatus {
                 case .authorized:
@@ -230,7 +226,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     }
     
     private func startRecording() throws {
-        
         // Cancel the previous task if it's running.
         recognitionTask?.cancel()
         self.recognitionTask = nil
@@ -240,7 +235,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         let inputNode = audioEngine.inputNode
-
+        
         // Create and configure the speech recognition request.
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let recognitionRequest = recognitionRequest else { fatalError("Unable to create a SFSpeechAudioBufferRecognitionRequest object") }
@@ -250,25 +245,23 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         if #available(iOS 13, *) {
             recognitionRequest.requiresOnDeviceRecognition = false
         }
- 
+        
         // Create a recognition task for the speech recognition session.
-        // Keep a reference to the task so that it can be canceled.
         recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { result, error in
             var isFinal = false
-
             if let result = result {
                 let transcription = result.bestTranscription
                 let text = transcription.formattedString
                 var words = text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
                 self.updateCount(newCount: self.count + 1)
                 self.wordBag = words
-
+                
                 if self.wordBag.count > 32 {
                     self.wordBag = Array(self.wordBag.suffix(32)) // Truncate to last 32 words
                 } else {
                     self.wordBag = Array(repeating: "", count: 32 - self.wordBag.count) + self.wordBag // Pad with empty strings
                 }
-
+                
                 var unused = 0
                 let replacedText = self.replaceEnglishWords(in: self.wordBag.joined(separator: " "), counter: &unused)
                 
@@ -276,7 +269,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                     self.updateCount(newCount: self.count - 1)
                 }
                 
-                let doubleReplacedText = self.replaceRomanWithSanskrit (in: replacedText, counter: &unused)
+                let doubleReplacedText = self.replaceRomanWithSanskrit(in: replacedText, counter: &unused)
                 
                 self.textView.text = "Correct Mantras: \(self.count / 16)"
                 
@@ -286,25 +279,24 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 } else {
                     self.resultTextView.text = replacedText
                 }
-
+                
                 isFinal = result.isFinal
                 print("Text \(text)")
             }
             
             if error != nil || isFinal {
-                
                 self.stopRecognitionTimer()
                 self.audioEngine.stop()
                 inputNode.removeTap(onBus: 0)
-
+                
                 self.recognitionRequest = nil
                 self.recognitionTask = nil
-
+                
                 self.recordButton.isEnabled = true
                 self.recordButton.setTitle("Start Recording", for: [])
             }
         }
-
+        
         // Configure the microphone input.
         let recordingFormat = inputNode.outputFormat(forBus: 0)
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
@@ -315,10 +307,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         try audioEngine.start()
         
         // Let the user know to start talking.
-        if firstRun{
-            textView.text = "(Go ahead, I'm listening)"
-            firstRun = false
-        }
+        textView.text = "(Go ahead, I'm listening)"
         
         // Start the timer to restart recognition every 15 seconds
         startRecognitionTimer()
@@ -330,12 +319,12 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         audioEngine.stop()
         audioEngine.inputNode.removeTap(onBus: 0)
         stopRecognitionTimer()
-
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             completion?()
         }
     }
-
+    
     @objc private func restartRecognition() {
         stopRecognition {
             do {
@@ -346,18 +335,16 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             }
         }
     }
-
+    
     // Timer functions
     private func startRecognitionTimer() {
         recognitionTimer = Timer.scheduledTimer(timeInterval: recognitionDuration, target: self, selector: #selector(restartRecognition), userInfo: nil, repeats: true)
     }
-
+    
     private func stopRecognitionTimer() {
         recognitionTimer?.invalidate()
         recognitionTimer = nil
     }
-    
-    // MARK: SFSpeechRecognizerDelegate
     
     public func speechRecognizer(_ speechRecognizer: SFSpeechRecognizer, availabilityDidChange available: Bool) {
         if available {
@@ -369,7 +356,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         }
     }
     
- 
     @IBAction func resetdButtonTapped() {
         let alert = UIAlertController(title: "Are You Sure?", message: "Are you sure you want to reset the count?", preferredStyle: .alert)
         let yesAction = UIAlertAction(title: "Yes", style: .default) { (action) in
@@ -394,7 +380,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         // Calculate the new animation duration
         let sliderMaxValue: Float = 2.0
         let maxSpeedValue: Float = 1.85 // Adjust as needed for the fastest speed
-
+        
         // Rescale the slider value: map 0.0 to 0.75 to the range [0, maxSpeedValue]
         let scaledValue = min(sender.value / (3.0 / 4.0), 1.0)
         
@@ -404,31 +390,30 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         // Update the animation duration
         animationDuration = 2.0 - newAnimationDuration
     }
-
     
     func replaceEnglishWords(in text: String, counter: inout Int) -> String {
         var replacedText = text.lowercased()
-
+        
         // Words that sound like "Hare"
         let hareWords = [
             "hi", "had", "a", "i", "hade", "hadi", "huddy", "hee", "hai",
             "hello", "today", "hooray", "honey", "hurry", "hari", "how", "are",
             "hoodie"
         ]
-
+        
         // Words that sound like "Krishna"
         let krishnaWords = [
             "krishna", "krish", "christian"
         ]
-
+        
         // Words that sound like "Rama"
         let ramaWords = [
             "rama"
         ]
-
+        
         var wordCounts: [String: Int] = ["Hare": 0, "Krishna": 0, "Rama": 0]
         var filteredWords: [String] = []
-
+        
         let words = replacedText.components(separatedBy: .whitespacesAndNewlines)
         for word in words {
             if hareWords.contains(word) {
@@ -442,15 +427,14 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 wordCounts["Rama"]! += 1
             }
         }
-
+        
         counter += wordCounts["Hare"]! + wordCounts["Krishna"]! + wordCounts["Rama"]!
         replacedText = filteredWords.joined(separator: " ")
-
+        
         return replacedText
     }
     
     func replaceRomanWithSanskrit(in text: String, counter: inout Int) -> String {
-        
         return text.replacingOccurrences(of: "Hare", with: "हरे").replacingOccurrences(of: "Krishna", with: "कृष्णा").replacingOccurrences(of: "Rama", with: "राम")
     }
     
@@ -478,8 +462,17 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         self.count = newCount
         UserDefaults.standard.set(self.count, forKey: "chantCount")
         self.textView.text = "Correct Mantras: \(self.count / 16)"
+        
+        let resultWords = resultTextView.text
+    }
+    
+    
+    @objc private func applicationWillEnterForeground() {
+        restartRecognition()
+    }
+    
+    @objc private func applicationDidEnterBackground() {
+        stopRecognition()
     }
     
 }
-
-
