@@ -7,6 +7,7 @@ The root view controller that provides a button to start and stop recording, and
 
 import UIKit
 import Speech
+import AVFoundation
 
 extension UIColor {
     static var parchmentDark: UIColor {
@@ -206,6 +207,29 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         // Configure the SFSpeechRecognizer object already stored in a local member variable.
         speechRecognizer.delegate = self
         
+        // Request microphone permission first
+        requestMicrophonePermission { [weak self] granted in
+            DispatchQueue.main.async {
+                if granted {
+                    // Then request speech recognition authorization
+                    self?.requestSpeechRecognitionPermission()
+                } else {
+                    self?.recordButton.isEnabled = false
+                    self?.recordButton.setTitle("Microphone access denied", for: .disabled)
+                    self?.microphoneSelectionButton?.setTitle("❌ Mic Denied", for: .normal)
+                    self?.microphoneSelectionButton?.isEnabled = false
+                }
+            }
+        }
+    }
+    
+    private func requestMicrophonePermission(completion: @escaping (Bool) -> Void) {
+        AVAudioSession.sharedInstance().requestRecordPermission { granted in
+            completion(granted)
+        }
+    }
+    
+    private func requestSpeechRecognitionPermission() {
         // Asynchronously make the authorization request.
         SFSpeechRecognizer.requestAuthorization { authStatus in
             
@@ -214,18 +238,20 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 switch authStatus {
                 case .authorized:
                     self.recordButton.isEnabled = true
+                    // Refresh audio inputs after permissions are granted
+                    self.configureAudioSessionAndRefreshInputs()
                     
                 case .denied:
                     self.recordButton.isEnabled = false
-                    self.recordButton.setTitle("User denied", for: .disabled)
+                    self.recordButton.setTitle("Speech recognition denied", for: .disabled)
                     
                 case .restricted:
                     self.recordButton.isEnabled = false
-                    self.recordButton.setTitle("Restricted", for: .disabled)
+                    self.recordButton.setTitle("Speech recognition restricted", for: .disabled)
                     
                 case .notDetermined:
                     self.recordButton.isEnabled = false
-                    self.recordButton.setTitle("Not authorized", for: .disabled)
+                    self.recordButton.setTitle("Speech recognition not authorized", for: .disabled)
                     
                 default:
                     self.recordButton.isEnabled = false
@@ -239,13 +265,14 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         recognitionTask?.cancel()
         self.recognitionTask = nil
         
-        // Refresh available inputs before starting
-        getAvailableAudioInputs()
-        
         // Configure the audio session for the app.
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+        try audioSession.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP, .duckOthers])
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        
+        // Refresh available inputs after configuring the session
+        getAvailableAudioInputs()
+        
         let inputNode = audioEngine.inputNode
         
         // Create and configure the speech recognition request.
@@ -481,7 +508,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     
     @objc private func applicationWillEnterForeground() {
         // Refresh microphone selection when returning to foreground
-        getAvailableAudioInputs()
+        configureAudioSessionAndRefreshInputs()
         restartRecognition()
     }
     
@@ -491,8 +518,35 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     
     // MARK: Microphone Selection Methods
     
+    private func configureAudioSessionAndRefreshInputs() {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.record, mode: .measurement, options: .allowBluetoothHFP)
+            try audioSession.setActive(true)
+            getAvailableAudioInputs()
+        } catch {
+            print("Failed to configure audio session: \(error)")
+            microphoneSelectionButton?.setTitle("❌ Audio Error", for: .normal)
+            microphoneSelectionButton?.isEnabled = false
+        }
+    }
+    
     private func getAvailableAudioInputs() {
         let audioSession = AVAudioSession.sharedInstance()
+        
+        // Ensure audio session is configured for recording
+        do {
+            if audioSession.category != .record {
+                try audioSession.setCategory(.record, mode: .measurement, options: .allowBluetoothHFP)
+            }
+            try audioSession.setActive(true)
+        } catch {
+            print("Failed to configure audio session for input checking: \(error)")
+            availableInputs = []
+            updateMicrophoneStatus()
+            return
+        }
+        
         availableInputs = audioSession.availableInputs ?? []
         
         // Find the current input
