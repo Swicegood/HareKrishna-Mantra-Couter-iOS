@@ -30,10 +30,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     private let recognitionDuration: TimeInterval = 15.0 // 15 seconds
     private var firstRun = true
     
-    // MARK: Microphone Selection Properties
-    private var availableInputs: [AVAudioSessionPortDescription] = []
-    private var selectedInputIndex: Int = 0
-    
     @IBOutlet var textView: UITextView! // Outlet for the first UITextView
     @IBOutlet var resultTextView: UITextView! // Outlet for the second UITextView
     @IBOutlet var recordButton: UIButton!
@@ -41,8 +37,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     @IBOutlet var clearButton: UIButton!
     @IBOutlet weak var infoButton: UIButton! // Outlet for the info button
     @IBOutlet weak var animationSpeedSlider: UISlider! // Outlet for the slider
-    @IBOutlet weak var microphoneStatusLabel: UILabel! // Outlet for microphone status
-    @IBOutlet weak var microphoneSelectionButton: UIButton! // Outlet for microphone selection
     
     // MARK: Animation Vars
     var animationLabels:[UILabel] = []
@@ -125,9 +119,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         // Add observers for app state transitions
         NotificationCenter.default.addObserver(self, selector: #selector(applicationWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(applicationDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
-        
-        // Initialize microphone selection
-        getAvailableAudioInputs()
     }
     
     // Override preferredStatusBarStyle to set the desired status bar style
@@ -238,9 +229,6 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         // Cancel the previous task if it's running.
         recognitionTask?.cancel()
         self.recognitionTask = nil
-        
-        // Refresh available inputs before starting
-        getAvailableAudioInputs()
         
         // Configure the audio session for the app.
         let audioSession = AVAudioSession.sharedInstance()
@@ -480,115 +468,11 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     
     
     @objc private func applicationWillEnterForeground() {
-        // Refresh microphone selection when returning to foreground
-        getAvailableAudioInputs()
         restartRecognition()
     }
     
     @objc private func applicationDidEnterBackground() {
         stopRecognition()
-    }
-    
-    // MARK: Microphone Selection Methods
-    
-    private func getAvailableAudioInputs() {
-        let audioSession = AVAudioSession.sharedInstance()
-        availableInputs = audioSession.availableInputs ?? []
-        
-        // Find the current input
-        if let currentInput = audioSession.currentRoute.inputs.first {
-            for (index, input) in availableInputs.enumerated() {
-                if input.uid == currentInput.uid {
-                    selectedInputIndex = index
-                    break
-                }
-            }
-        }
-        
-        updateMicrophoneStatus()
-    }
-    
-    private func switchAudioInput(to input: AVAudioSessionPortDescription) throws {
-        let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setPreferredInput(input)
-        updateMicrophoneStatus()
-    }
-    
-    private func updateMicrophoneStatus() {
-        let audioSession = AVAudioSession.sharedInstance()
-        let currentInput = audioSession.currentRoute.inputs.first
-        
-        var inputName = "Unknown"
-        var inputType = ""
-        
-        if let input = currentInput {
-            inputName = input.portName
-            
-            switch input.portType {
-            case .bluetoothA2DP, .bluetoothLE:
-                inputType = " (AirPods/Bluetooth)"
-            case .builtInMic:
-                inputType = " (Phone Microphone)"
-            case .headsetMic:
-                inputType = " (Headset)"
-            case .bluetoothHFP:
-                inputType = " (Bluetooth Headset)"
-            default:
-                inputType = " (\(input.portType.rawValue))"
-            }
-        }
-        
-        let statusText = "Microphone: \(inputName)\(inputType)"
-        microphoneStatusLabel?.text = statusText
-        
-        // Update microphone selection button
-        if availableInputs.count > 1 {
-            microphoneSelectionButton?.setTitle("Switch Mic", for: .normal)
-            microphoneSelectionButton?.isEnabled = true
-        } else {
-            microphoneSelectionButton?.setTitle("No Options", for: .normal)
-            microphoneSelectionButton?.isEnabled = false
-        }
-        
-        print("Currently using: \(statusText)")
-    }
-    
-    @IBAction func microphoneSelectionButtonTapped(_ sender: UIButton) {
-        guard availableInputs.count > 1 else { return }
-        
-        let alert = UIAlertController(title: "Select Microphone", message: "Choose which microphone to use for recording", preferredStyle: .actionSheet)
-        
-        for (index, input) in availableInputs.enumerated() {
-            let baseTitle = "\(input.portName) (\(input.portType.rawValue))"
-            let title = (index == selectedInputIndex) ? "✓ " + baseTitle : baseTitle
-            let action = UIAlertAction(title: title, style: .default) { _ in
-                do {
-                    try self.switchAudioInput(to: input)
-                    self.selectedInputIndex = index
-                } catch {
-                    self.showMessage("Failed to switch microphone: \(error.localizedDescription)")
-                }
-            }
-
-            if index == selectedInputIndex {
-                if #available(iOS 13.0, *) {
-                    action.setValue(UIImage(systemName: "checkmark"), forKey: "image")
-                }
-                // On earlier iOS versions, the title already includes a checkmark character.
-            }
-
-            alert.addAction(action)
-        }
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        
-        // For iPad
-        if let popover = alert.popoverPresentationController {
-            popover.sourceView = sender
-            popover.sourceRect = sender.bounds
-        }
-        
-        present(alert, animated: true)
     }
     
 }
