@@ -216,7 +216,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                 } else {
                     self?.recordButton.isEnabled = false
                     self?.recordButton.setTitle("Microphone access denied", for: .disabled)
-                    self?.microphoneSelectionButton?.setTitle("❌ Mic Denied", for: .normal)
+                    self?.microphoneSelectionButton?.setTitle("🔇 Mic Not Available", for: .normal)
                     self?.microphoneSelectionButton?.isEnabled = false
                 }
             }
@@ -526,7 +526,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             getAvailableAudioInputs()
         } catch {
             print("Failed to configure audio session: \(error)")
-            microphoneSelectionButton?.setTitle("❌ Audio Error", for: .normal)
+            microphoneSelectionButton?.setTitle("🔧 Audio Setup", for: .normal)
             microphoneSelectionButton?.isEnabled = false
         }
     }
@@ -596,7 +596,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             microphoneSelectionButton?.setTitle("🔄 Switch", for: .normal)
             microphoneSelectionButton?.isEnabled = true
         } else {
-            microphoneSelectionButton?.setTitle("❌ No Options", for: .normal)
+            microphoneSelectionButton?.setTitle("🎤 Single Mic", for: .normal)
             microphoneSelectionButton?.isEnabled = false
         }
         
