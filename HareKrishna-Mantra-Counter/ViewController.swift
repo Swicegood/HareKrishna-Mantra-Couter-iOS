@@ -518,35 +518,31 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         let audioSession = AVAudioSession.sharedInstance()
         let currentInput = audioSession.currentRoute.inputs.first
         
-        var inputName = "Unknown"
-        var inputType = ""
+        var statusText = "🎤 Unknown"
         
         if let input = currentInput {
-            inputName = input.portName
-            
             switch input.portType {
             case .bluetoothA2DP, .bluetoothLE:
-                inputType = " (AirPods/Bluetooth)"
+                statusText = "🎧 AirPods"
             case .builtInMic:
-                inputType = " (Phone Microphone)"
+                statusText = "📱 Phone Mic"
             case .headsetMic:
-                inputType = " (Headset)"
+                statusText = "🎧 Headset"
             case .bluetoothHFP:
-                inputType = " (Bluetooth Headset)"
+                statusText = "🎧 Bluetooth"
             default:
-                inputType = " (\(input.portType.rawValue))"
+                statusText = "🎤 \(input.portType.rawValue)"
             }
         }
         
-        let statusText = "Microphone: \(inputName)\(inputType)"
         microphoneStatusLabel?.text = statusText
         
         // Update microphone selection button
         if availableInputs.count > 1 {
-            microphoneSelectionButton?.setTitle("Switch Mic", for: .normal)
+            microphoneSelectionButton?.setTitle("🔄 Switch", for: .normal)
             microphoneSelectionButton?.isEnabled = true
         } else {
-            microphoneSelectionButton?.setTitle("No Options", for: .normal)
+            microphoneSelectionButton?.setTitle("❌ No Options", for: .normal)
             microphoneSelectionButton?.isEnabled = false
         }
         

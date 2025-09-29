@@ -22,7 +22,7 @@
                                 <rect key="frame" x="42" y="762" width="274" height="35"/>
                                 <state key="normal" title=" Start Recording!">
                                     <color key="titleColor" red="0.55670103092783507" green="0.32578154707195861" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                                    <imageReference key="image" image="mic.fill.badge.plus" catalog="system" symbolScale="large"/>
+                                    <imageReference key="image" image="microphone.badge.plus.fill" catalog="system" symbolScale="large"/>
                                 </state>
                                 <connections>
                                     <action selector="recordButtonTapped" destination="BYZ-38-t0r" eventType="touchUpInside" id="Ir3-od-CCo"/>
@@ -88,6 +88,20 @@
                                 <state key="normal" title="Button"/>
                                 <buttonConfiguration key="configuration" style="plain" image="hare.circle" catalog="system" title=""/>
                             </button>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="📱 Phone Mic" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Mic-Status-Label">
+                                <rect key="frame" x="16" y="480" width="343" height="21"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" systemColor="secondaryLabelColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Mic-Selection-Button">
+                                <rect key="frame" x="16" y="509" width="120" height="30"/>
+                                <state key="normal" title="Switch Mic"/>
+                                <buttonConfiguration key="configuration" style="system" title="Switch Mic"/>
+                                <connections>
+                                    <action selector="microphoneSelectionButtonTapped:" destination="BYZ-38-t0r" eventType="touchUpInside" id="Mic-Selection-Action"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" red="0.92941176470588238" green="0.78823529411764703" blue="0.5725490196078431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
@@ -116,6 +130,12 @@
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="7hv-z3-7Oo" secondAttribute="trailing" constant="30" id="dCa-7X-dLb"/>
                             <constraint firstItem="1v6-RF-twk" firstAttribute="leading" relation="lessThanOrEqual" secondItem="4aq-UO-WOf" secondAttribute="trailing" constant="50" id="efP-eu-Sas"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="1v6-RF-twk" secondAttribute="bottom" constant="24" id="gOC-le-oXP"/>
+                            <constraint firstItem="Mic-Status-Label" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="16" id="Mic-Status-Leading"/>
+                            <constraint firstItem="Mic-Status-Label" firstAttribute="top" secondItem="7hv-z3-7Oo" secondAttribute="bottom" constant="2" id="Mic-Status-Top"/>
+                            <constraint firstItem="Mic-Selection-Button" firstAttribute="leading" secondItem="Mic-Status-Label" secondAttribute="trailing" constant="8" id="Mic-Selection-Leading"/>
+                            <constraint firstItem="Mic-Selection-Button" firstAttribute="centerY" secondItem="Mic-Status-Label" secondAttribute="centerY" id="Mic-Selection-CenterY"/>
+                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="Mic-Selection-Button" secondAttribute="trailing" constant="16" id="Mic-Selection-Trailing"/>
+                            <constraint firstItem="1p6-Hu-bSi" firstAttribute="top" relation="lessThanOrEqual" secondItem="Mic-Status-Label" secondAttribute="bottom" constant="40" id="Mic-Status-Bottom"/>
                             <constraint firstItem="1p6-Hu-bSi" firstAttribute="top" relation="lessThanOrEqual" secondItem="8pO-uG-5cc" secondAttribute="bottom" constant="39" id="nff-kv-9KB"/>
                             <constraint firstItem="5uQ-Qp-uP7" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="29" id="pbo-kQ-9In"/>
                             <constraint firstItem="7hv-z3-7Oo" firstAttribute="leading" secondItem="8pO-uG-5cc" secondAttribute="trailing" constant="8" symbolic="YES" id="qcW-aM-bMi"/>
@@ -133,6 +153,8 @@
                     </view>
                     <connections>
                         <outlet property="animationSpeedSlider" destination="8pO-uG-5cc" id="jDr-5p-hrz"/>
+                        <outlet property="microphoneSelectionButton" destination="Mic-Selection-Button" id="Mic-Selection-Outlet"/>
+                        <outlet property="microphoneStatusLabel" destination="Mic-Status-Label" id="Mic-Status-Outlet"/>
                         <outlet property="recordButton" destination="4aq-UO-WOf" id="33M-57-5qD"/>
                         <outlet property="resultTextView" destination="1p6-Hu-bSi" id="vn9-Su-b1q"/>
                         <outlet property="textView" destination="n1D-GC-6tq" id="6VE-9L-nZK"/>
