@@ -277,6 +277,7 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         print("🔧 Audio session category before: \(audioSession.category.rawValue)")
         print("🔧 Audio session mode before: \(audioSession.mode.rawValue)")
         print("🔧 Audio session options before: \(audioSession.categoryOptions)")
+        print("🔧 Audio session active before: \(audioSession.isOtherAudioPlaying)")
         
         try audioSession.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP, .duckOthers])
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
@@ -284,21 +285,37 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         print("🔧 Audio session category after: \(audioSession.category.rawValue)")
         print("🔧 Audio session mode after: \(audioSession.mode.rawValue)")
         print("🔧 Audio session options after: \(audioSession.categoryOptions)")
+        print("🔧 Audio session active after: \(audioSession.isOtherAudioPlaying)")
         
         // Check current input route
         let currentRoute = audioSession.currentRoute
         print("🎧 Current input route: \(currentRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
         print("🔊 Current output route: \(currentRoute.outputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
         
+        // Check if the preferred input is actually being used
+        if let preferredInput = audioSession.preferredInput {
+            print("🔍 Preferred input: \(preferredInput.portName) (\(preferredInput.portType.rawValue))")
+            let isPreferredInputActive = currentRoute.inputs.contains { $0.uid == preferredInput.uid }
+            print("🔍 Preferred input active: \(isPreferredInputActive)")
+        } else {
+            print("⚠️ No preferred input set")
+        }
+        
         // Refresh available inputs after configuring the session
         getAvailableAudioInputs()
         
         let inputNode = audioEngine.inputNode
         print("🎤 Input node format: \(inputNode.outputFormat(forBus: 0))")
+        print("🎤 Input node hardware format: \(inputNode.inputFormat(forBus: 0))")
+        print("🎤 Input node number of inputs: \(inputNode.numberOfInputs)")
         
         // Create and configure the speech recognition request.
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let recognitionRequest = recognitionRequest else { fatalError("Unable to create a SFSpeechAudioBufferRecognitionRequest object") }
+        
+        print("🗣️ Speech recognition request created")
+        print("🗣️ Recognition request format: \(recognitionRequest.nativeAudioFormat)")
+        
         recognitionRequest.shouldReportPartialResults = true
         
         // Keep speech recognition data on device
@@ -306,7 +323,11 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             recognitionRequest.requiresOnDeviceRecognition = false
         }
         
-        print("🗣️ Speech recognition request created")
+        print("🗣️ Recognition request configured - shouldReportPartialResults: \(recognitionRequest.shouldReportPartialResults)")
+        
+        // Check speech recognizer availability
+        print("🗣️ Speech recognizer available: \(speechRecognizer.isAvailable)")
+        print("🗣️ Speech recognizer locale: \(speechRecognizer.locale)")
         
         // Create a recognition task for the speech recognition session.
         recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { result, error in
@@ -378,13 +399,42 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         // Use the hardware format to avoid format mismatch issues with Bluetooth devices
         let finalFormat = hardwareFormat
         print("🎤 Using final format: \(finalFormat)")
+        print("🎤 Format comparison - Recording: \(recordingFormat), Hardware: \(hardwareFormat), Final: \(finalFormat)")
         
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: finalFormat) { (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
-            // Only log occasionally to avoid spam
-            if Int.random(in: 1...100) == 1 {
-                print("📊 Audio buffer received: \(buffer.frameLength) frames")
+        // Remove any existing tap to prevent crashes
+        if inputNode.numberOfInputs > 0 {
+            inputNode.removeTap(onBus: 0)
+            print("🧹 Removed existing tap from input node")
+        }
+        
+        // Install tap with error handling
+        do {
+            print("🎤 Installing tap with buffer size 1024, format: \(finalFormat)")
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: finalFormat) { (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
+            // Log audio buffer details more frequently for debugging
+            if Int.random(in: 1...10) == 1 {
+                let audioLevel = self.getAudioLevel(from: buffer)
+                print("📊 Audio buffer: \(buffer.frameLength) frames, format: \(buffer.format), level: \(audioLevel), timestamp: \(when)")
+                
+                // Check if we're getting any audio at all
+                if audioLevel > 0.001 {
+                    print("🔊 Audio detected! Level: \(audioLevel)")
+                } else {
+                    print("🔇 No audio detected, level: \(audioLevel)")
+                }
             }
-            self.recognitionRequest?.append(buffer)
+            
+            // Check if we have a valid recognition request
+            if let request = self.recognitionRequest {
+                request.append(buffer)
+            } else {
+                print("⚠️ No recognition request available to append audio buffer")
+            }
+        }
+        print("🎤 Tap installed successfully")
+        } catch {
+            print("❌ Failed to install tap: \(error)")
+            throw error
         }
         
         print("🔧 Preparing audio engine...")
@@ -430,13 +480,42 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     
     private func restartRecording() throws {
         print("🔄 Restarting recording with new input...")
-        // Stop current recording
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
         
-        // Start recording with new input
-        try startRecording()
-        print("✅ Recording restarted successfully")
+        // Stop current recording and clean up
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        
+        // Remove tap safely
+        let inputNode = audioEngine.inputNode
+        if inputNode.numberOfInputs > 0 {
+            inputNode.removeTap(onBus: 0)
+            print("🧹 Removed tap during restart")
+        }
+        
+        // Wait a moment for cleanup to complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            do {
+                // Start recording with new input
+                try self.startRecording()
+                print("✅ Recording restarted successfully")
+            } catch {
+                print("❌ Failed to restart recording: \(error)")
+                self.recordButton.setTitle("Recording Not Available", for: .disabled)
+            }
+        }
+    }
+    
+    private func getAudioLevel(from buffer: AVAudioPCMBuffer) -> Float {
+        guard let channelData = buffer.floatChannelData?[0] else { return 0.0 }
+        let frameLength = Int(buffer.frameLength)
+        
+        var sum: Float = 0.0
+        for i in 0..<frameLength {
+            sum += abs(channelData[i])
+        }
+        
+        return sum / Float(frameLength)
     }
     
     // Timer functions
@@ -629,35 +708,73 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
     private func switchAudioInput(to input: AVAudioSessionPortDescription) throws {
         let audioSession = AVAudioSession.sharedInstance()
         
-        print("Switching to input: \(input.portName) (\(input.portType.rawValue))")
+        print("🔄 Switching to input: \(input.portName) (\(input.portType.rawValue))")
+        print("🔍 Current route before switch: \(audioSession.currentRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+        
+        // Stop current recording if running to prevent crashes
+        if audioEngine.isRunning {
+            print("🛑 Stopping audio engine before input switch")
+            audioEngine.stop()
+            audioEngine.inputNode.removeTap(onBus: 0)
+        }
+        
+        // Cancel any ongoing recognition
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        recognitionRequest = nil
+        
+        print("🧹 Cleaned up audio engine and recognition")
+        print("🔍 Audio session state before switch - Category: \(audioSession.category.rawValue), Mode: \(audioSession.mode.rawValue), Active: \(audioSession.isOtherAudioPlaying)")
         
         // For Bluetooth devices, we need to use a different approach
         if input.portType == .bluetoothA2DP || input.portType == .bluetoothLE || input.portType == .bluetoothHFP {
-            print("Configuring audio session for Bluetooth device")
+            print("🔧 Configuring audio session for Bluetooth device")
+            print("🔍 Bluetooth device details - Name: \(input.portName), Type: \(input.portType.rawValue), UID: \(input.uid)")
             
             // First, deactivate the current session
+            print("🔄 Deactivating audio session...")
             try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+            print("✅ Audio session deactivated")
+            
+            // Wait a moment for deactivation to complete
+            Thread.sleep(forTimeInterval: 0.1)
             
             // Set the category with Bluetooth support
+            print("🔧 Setting audio session category for Bluetooth...")
             try audioSession.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP, .duckOthers])
+            print("✅ Audio session category set")
             
             // Then set the preferred input
+            print("🔧 Setting preferred input to \(input.portName)...")
             try audioSession.setPreferredInput(input)
+            print("✅ Preferred input set")
             
             // Activate the session
+            print("🔄 Activating audio session...")
             try audioSession.setActive(true)
+            print("✅ Audio session activated")
+            
+            // Check the route after activation
+            let routeAfterActivation = audioSession.currentRoute
+            print("🔍 Route after activation: \(routeAfterActivation.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
             
             // For Bluetooth, we need to wait longer for the connection to establish
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                print("Updated microphone status after Bluetooth switch")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                print("✅ Updated microphone status after Bluetooth switch")
                 self.updateMicrophoneStatus()
             }
         } else {
             // For non-Bluetooth devices, use the standard approach
+            print("🔧 Setting preferred input for non-Bluetooth device...")
             try audioSession.setPreferredInput(input)
+            print("✅ Preferred input set for \(input.portName)")
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                print("Updated microphone status after switch")
+            // Check the route immediately after setting preferred input
+            let routeAfterPreferred = audioSession.currentRoute
+            print("🔍 Route after setting preferred input: \(routeAfterPreferred.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                print("✅ Updated microphone status after switch")
                 self.updateMicrophoneStatus()
             }
         }
@@ -714,20 +831,25 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
                     try self.switchAudioInput(to: input)
                     self.selectedInputIndex = index
                     
-                    // If we're currently recording, restart the audio engine to pick up the new input
-                    if self.audioEngine.isRunning {
+                    // If we were recording before the switch, restart the audio engine to pick up the new input
+                    if self.recordButton.title(for: .normal) == "Stop Recording" {
                         // For Bluetooth devices, wait longer before restarting
-                        let delay: TimeInterval = (input.portType == .bluetoothA2DP || input.portType == .bluetoothLE || input.portType == .bluetoothHFP) ? 2.5 : 1.0
-                        print("🔄 Audio engine is running, will restart recording in \(delay) seconds...")
+                        let delay: TimeInterval = (input.portType == .bluetoothA2DP || input.portType == .bluetoothLE || input.portType == .bluetoothHFP) ? 3.5 : 1.5
+                        print("🔄 Was recording, will restart recording in \(delay) seconds...")
                         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                             do {
-                                try self.restartRecording()
+                                try self.startRecording()
+                                self.recordButton.setTitle("Stop Recording", for: [])
+                                if !self.isAnimating {
+                                    self.startAnimation()
+                                }
                             } catch {
                                 print("❌ Failed to restart recording after input switch: \(error)")
+                                self.recordButton.setTitle("Recording Not Available", for: .disabled)
                             }
                         }
                     } else {
-                        print("ℹ️ Audio engine not running, no restart needed")
+                        print("ℹ️ Was not recording, no restart needed")
                     }
                     
                 } catch {
