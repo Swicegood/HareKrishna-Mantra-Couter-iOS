@@ -279,21 +279,88 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         print("🔧 Audio session options before: \(audioSession.categoryOptions)")
         print("🔧 Audio session active before: \(audioSession.isOtherAudioPlaying)")
         
-        // Force deactivation first to ensure clean state
-        do {
-            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
-            print("🔧 Audio session deactivated before configuration")
-        } catch {
-            print("🔧 Audio session was not active, continuing...")
+        // Check current session state first
+        print("🔧 Current session state - Category: \(audioSession.category.rawValue), Mode: \(audioSession.mode.rawValue), Active: \(audioSession.isOtherAudioPlaying)")
+        print("🔧 Session route: \(audioSession.currentRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+        
+        // Only deactivate if the session is currently active
+        if audioSession.isOtherAudioPlaying {
+            do {
+                try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+                print("🔧 Audio session deactivated before configuration")
+                // Wait for deactivation to complete
+                Thread.sleep(forTimeInterval: 0.2)
+            } catch {
+                print("🔧 Audio session deactivation failed: \(error)")
+            }
+        } else {
+            print("🔧 Audio session was not active, proceeding with configuration")
         }
         
+        // Set category and mode
         try audioSession.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP, .duckOthers])
-        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        print("🔧 Audio session category and mode set")
+        
+        // Try to activate the session with retry logic
+        var sessionActivated = false
+        for attempt in 1...5 {
+            do {
+                try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+                sessionActivated = true
+                print("🔧 Audio session activated successfully on attempt \(attempt)")
+                
+                // Verify the session is actually active by checking if we can get the current route
+                Thread.sleep(forTimeInterval: 0.1)
+                let currentRoute = audioSession.currentRoute
+                if !currentRoute.inputs.isEmpty {
+                    print("✅ Audio session is confirmed active - route: \(currentRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+                } else {
+                    print("⚠️ Audio session activation reported success but no inputs available")
+                    sessionActivated = false
+                    if attempt < 5 {
+                        Thread.sleep(forTimeInterval: 0.3)
+                    }
+                }
+                break
+            } catch {
+                print("🔧 Audio session activation attempt \(attempt) failed: \(error)")
+                if attempt < 5 {
+                    Thread.sleep(forTimeInterval: 0.3)
+                }
+            }
+        }
+        
+        if !sessionActivated {
+            print("❌ Failed to activate audio session after 5 attempts")
+            throw NSError(domain: "AudioSessionError", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to activate audio session"])
+        }
         
         print("🔧 Audio session category after: \(audioSession.category.rawValue)")
         print("🔧 Audio session mode after: \(audioSession.mode.rawValue)")
         print("🔧 Audio session options after: \(audioSession.categoryOptions)")
         print("🔧 Audio session active after: \(audioSession.isOtherAudioPlaying)")
+        
+        // Final verification that the session is actually active by checking route
+        let finalRoute = audioSession.currentRoute
+        if finalRoute.inputs.isEmpty {
+            print("⚠️ Audio session has no inputs after configuration, attempting final reactivation...")
+            do {
+                try audioSession.setActive(true)
+                Thread.sleep(forTimeInterval: 0.2)
+                let reactivatedRoute = audioSession.currentRoute
+                if !reactivatedRoute.inputs.isEmpty {
+                    print("✅ Audio session reactivated and confirmed active - route: \(reactivatedRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+                } else {
+                    print("❌ Audio session reactivation failed - still no inputs available")
+                    throw NSError(domain: "AudioSessionError", code: 1003, userInfo: [NSLocalizedDescriptionKey: "Audio session cannot be activated"])
+                }
+            } catch {
+                print("❌ Failed to reactivate audio session: \(error)")
+                throw error
+            }
+        } else {
+            print("✅ Audio session is confirmed active - route: \(finalRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+        }
         
         // Check current input route
         let currentRoute = audioSession.currentRoute
@@ -326,6 +393,19 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         
         // Refresh available inputs after configuring the session
         getAvailableAudioInputs()
+        
+        // Ensure we have a valid input route
+        let routeAfterRefresh = audioSession.currentRoute
+        if routeAfterRefresh.inputs.isEmpty {
+            print("⚠️ No audio inputs available, attempting to refresh...")
+            getAvailableAudioInputs()
+            
+            // If still no inputs, try to set a default
+            if let firstInput = availableInputs.first {
+                print("🔧 Setting default input: \(firstInput.portName)")
+                try audioSession.setPreferredInput(firstInput)
+            }
+        }
         
         let inputNode = audioEngine.inputNode
         print("🎤 Input node format: \(inputNode.outputFormat(forBus: 0))")
@@ -461,11 +541,79 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         }
         
         print("🔧 Preparing audio engine...")
+        
+        // Ensure audio session is still active before starting engine
+        let preEngineRoute = audioSession.currentRoute
+        if preEngineRoute.inputs.isEmpty {
+            print("⚠️ Audio session has no inputs before engine start, reactivating...")
+            do {
+                try audioSession.setActive(true)
+                Thread.sleep(forTimeInterval: 0.2)
+                let reactivatedRoute = audioSession.currentRoute
+                if reactivatedRoute.inputs.isEmpty {
+                    throw NSError(domain: "AudioSessionError", code: 1004, userInfo: [NSLocalizedDescriptionKey: "Audio session cannot be activated for engine start"])
+                }
+                print("✅ Audio session reactivated for engine start - route: \(reactivatedRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+            } catch {
+                print("❌ Failed to reactivate audio session for engine start: \(error)")
+                throw error
+            }
+        } else {
+            print("✅ Audio session has inputs before engine start - route: \(preEngineRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+        }
+        
+        // Stop the engine if it's already running
+        if audioEngine.isRunning {
+            print("🛑 Stopping existing audio engine...")
+            audioEngine.stop()
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        
         audioEngine.prepare()
         
         print("🚀 Starting audio engine...")
-        try audioEngine.start()
-        print("✅ Audio engine started successfully")
+        
+        // Try to start the engine with retry logic
+        var engineStarted = false
+        for attempt in 1...5 {
+            do {
+                // Double-check session has inputs before each attempt
+                let attemptRoute = audioSession.currentRoute
+                if attemptRoute.inputs.isEmpty {
+                    print("⚠️ Audio session has no inputs before attempt \(attempt), reactivating...")
+                    try audioSession.setActive(true)
+                    Thread.sleep(forTimeInterval: 0.2)
+                    let reactivatedRoute = audioSession.currentRoute
+                    print("🔍 Route after reactivation: \(reactivatedRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+                }
+                
+                try audioEngine.start()
+                engineStarted = true
+                print("✅ Audio engine started successfully on attempt \(attempt)")
+                break
+            } catch {
+                print("❌ Audio engine start attempt \(attempt) failed: \(error)")
+                if attempt < 5 {
+                    // Stop and prepare again
+                    audioEngine.stop()
+                    Thread.sleep(forTimeInterval: 0.3)
+                    audioEngine.prepare()
+                    
+                    // Also try to reactivate session
+                    do {
+                        try audioSession.setActive(true)
+                        Thread.sleep(forTimeInterval: 0.2)
+                    } catch {
+                        print("⚠️ Failed to reactivate session between attempts: \(error)")
+                    }
+                }
+            }
+        }
+        
+        if !engineStarted {
+            print("❌ Failed to start audio engine after 5 attempts")
+            throw NSError(domain: "AudioEngineError", code: 1002, userInfo: [NSLocalizedDescriptionKey: "Failed to start audio engine"])
+        }
         
         // Let the user know to start talking.
         textView.text = "(Go ahead, I'm listening)"
