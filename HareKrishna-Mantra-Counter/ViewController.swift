@@ -279,6 +279,14 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         print("🔧 Audio session options before: \(audioSession.categoryOptions)")
         print("🔧 Audio session active before: \(audioSession.isOtherAudioPlaying)")
         
+        // Force deactivation first to ensure clean state
+        do {
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+            print("🔧 Audio session deactivated before configuration")
+        } catch {
+            print("🔧 Audio session was not active, continuing...")
+        }
+        
         try audioSession.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP, .duckOthers])
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         
@@ -297,6 +305,21 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
             print("🔍 Preferred input: \(preferredInput.portName) (\(preferredInput.portType.rawValue))")
             let isPreferredInputActive = currentRoute.inputs.contains { $0.uid == preferredInput.uid }
             print("🔍 Preferred input active: \(isPreferredInputActive)")
+            
+            if !isPreferredInputActive {
+                print("⚠️ Preferred input is not active! Current route: \(currentRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+                print("🔄 Attempting to force preferred input activation...")
+                
+                // Try to force the preferred input
+                do {
+                    try audioSession.setPreferredInput(preferredInput)
+                    try audioSession.setActive(true)
+                    let newRoute = audioSession.currentRoute
+                    print("🔍 Route after forcing preferred input: \(newRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+                } catch {
+                    print("❌ Failed to force preferred input: \(error)")
+                }
+            }
         } else {
             print("⚠️ No preferred input set")
         }
@@ -766,12 +789,32 @@ public class ViewController: UIViewController, SFSpeechRecognizerDelegate {
         } else {
             // For non-Bluetooth devices, use the standard approach
             print("🔧 Setting preferred input for non-Bluetooth device...")
+            
+            // First deactivate the session to ensure clean state
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+            print("✅ Audio session deactivated for non-Bluetooth switch")
+            
+            // Wait a moment for deactivation
+            Thread.sleep(forTimeInterval: 0.1)
+            
+            // Set the preferred input
             try audioSession.setPreferredInput(input)
             print("✅ Preferred input set for \(input.portName)")
+            
+            // Reactivate the session
+            try audioSession.setActive(true)
+            print("✅ Audio session reactivated")
             
             // Check the route immediately after setting preferred input
             let routeAfterPreferred = audioSession.currentRoute
             print("🔍 Route after setting preferred input: \(routeAfterPreferred.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", "))")
+            
+            // Verify the preferred input is actually set
+            if let currentPreferred = audioSession.preferredInput {
+                print("🔍 Current preferred input: \(currentPreferred.portName) (\(currentPreferred.portType.rawValue))")
+            } else {
+                print("⚠️ No preferred input found after setting")
+            }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 print("✅ Updated microphone status after switch")
